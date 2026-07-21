@@ -1,0 +1,20 @@
+{
+  "name": "research-trail",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev --workspace @research-trail/api\" \"npm run dev --workspace @research-trail/web\"",
+    "build": "npm run build --workspace @research-trail/api && npm run build --workspace @research-trail/web",
+    "lint": "npm run lint --workspace @research-trail/api && npm run lint --workspace @research-trail/web",
+    "db:generate": "npm run prisma:generate --workspace @research-trail/api",
+    "db:migrate": "npm run prisma:migrate --workspace @research-trail/api",
+    "db:studio": "npm run prisma:studio --workspace @research-trail/api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
