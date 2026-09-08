@@ -59,7 +59,7 @@ export default function HomePage() {
           <div className="mt-5 space-y-4">
             <label><span className="label">From year</span><input className="input" type="number" min="1800" max="2100" value={fromYear} onChange={(e) => { setFromYear(e.target.value); setPage(1); }} /></label>
             <label><span className="label">To year</span><input className="input" type="number" min="1800" max="2100" value={toYear} onChange={(e) => { setToYear(e.target.value); setPage(1); }} /></label>
-            <label><span className="label">Sort by</span><select className="input" value={sort} onChange={(e) => { setSort(e.target.value as typeof sort); setPage(1); }}><option value="relevance">Relevance</option><option value="newest">Newest</option><option value="cited">Most cited</option></select></label>
+            <label><span className="label">Sort by</span><select className="input mb-2" value={sort} onChange={(e) => { setSort(e.target.value as typeof sort); setPage(1); }}><option id="select_relevance" value="relevance">Relevance</option><option id="select_newest" value="newest">Newest</option><option id="select_cited" value="cited">Most cited</option></select></label>
             <label className="flex items-center gap-3 rounded-xl border border-slate-200 p-3 text-sm"><input type="checkbox" checked={openAccess} onChange={(e) => { setOpenAccess(e.target.checked); setPage(1); }} /> Open access only</label>
           </div>
         </aside>

@@ -1,6 +1,14 @@
 import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OpenAlexWork, NormalizedWork } from './openalex.types';
+import {
+  OpenAlexWork,
+  NormalizedWork,
+  OpenAlexTopic,
+  NormalizedTopic,
+  OpenAlexAuthor,
+  NormalizedAuthor,
+  TopicTrendsResponse,
+} from './openalex.types';
 
 @Injectable()
 export class OpenAlexService {
@@ -136,6 +144,207 @@ export class OpenAlexService {
     return decodeURIComponent(id).replace(/^https?:\/\/(api\.)?openalex\.org\//, '').trim();
   }
 
+  async searchTopics(query: string, limit = 10): Promise<NormalizedTopic[]> {
+    if (!query?.trim()) return [];
+    const response = await this.request<{ results: OpenAlexTopic[] }>('/topics', {
+      search: query.trim(),
+      per_page: String(limit),
+    });
+    return response.results.map((topic) => this.normalizeTopic(topic));
+  }
+
+  async getTopic(id: string): Promise<NormalizedTopic> {
+    const topicId = this.normalizeId(id);
+    const response = await this.request<OpenAlexTopic>(`/topics/${encodeURIComponent(topicId)}`);
+    return this.normalizeTopic(response);
+  }
+
+  async getTopicTrends(input: {
+    topicId?: string;
+    query?: string;
+    fromYear?: number;
+    toYear?: number;
+  }): Promise<TopicTrendsResponse> {
+    let topic: NormalizedTopic | null = null;
+    if (input.topicId) {
+      try {
+        topic = await this.getTopic(input.topicId);
+      } catch (err) {
+        if (input.query) {
+          const results = await this.searchTopics(input.query, 1);
+          if (results.length) topic = results[0];
+        }
+        if (!topic) throw err;
+      }
+    } else if (input.query?.trim()) {
+      const results = await this.searchTopics(input.query.trim(), 1);
+      if (results.length) {
+        topic = results[0];
+      }
+    }
+
+    if (!topic) {
+      // Default to Machine Learning / AI
+      const defaults = await this.searchTopics('Machine Learning and Algorithms', 1);
+      topic = defaults[0] ?? null;
+    }
+
+    if (!topic) {
+      throw new NotFoundException('Topic not found');
+    }
+
+    const currentYear = new Date().getFullYear();
+    const toYear = input.toYear ? Math.min(input.toYear, currentYear) : currentYear;
+    const fromYear = input.fromYear ? Math.max(1990, input.fromYear) : toYear - 9;
+
+    const [groupByResponse, topWorksResponse, authorsResponse, siblingTopicsResponse] = await Promise.all([
+      this.request<{ group_by: Array<{ key: string; count: number }> }>('/works', {
+        filter: `topics.id:${topic.openAlexId}`,
+        group_by: 'publication_year',
+      }).catch(() => ({ group_by: [] })),
+
+      this.request<{ results: OpenAlexWork[] }>('/works', {
+        filter: `topics.id:${topic.openAlexId}`,
+        sort: 'cited_by_count:desc',
+        per_page: '12',
+      }).catch(() => ({ results: [] })),
+
+      this.request<{ results: OpenAlexAuthor[] }>('/authors', {
+        filter: `topics.id:${topic.openAlexId}`,
+        sort: 'cited_by_count:desc',
+        per_page: '8',
+      }).catch(() => ({ results: [] })),
+
+      (async () => {
+        const siblingIds = (topic.siblings ?? [])
+          .slice(0, 8)
+          .map((s) => this.normalizeId(s.id))
+          .filter(Boolean);
+        if (!siblingIds.length) return [];
+        try {
+          const res = await this.request<{ results: OpenAlexTopic[] }>('/topics', {
+            filter: `openalex:${siblingIds.join('|')}`,
+            per_page: String(siblingIds.length),
+          });
+          return res.results.map((t) => this.normalizeTopic(t));
+        } catch {
+          return [];
+        }
+      })(),
+    ]);
+
+    const pubYearMap = new Map<number, number>();
+    for (const item of groupByResponse.group_by || []) {
+      const yr = parseInt(item.key, 10);
+      if (!isNaN(yr)) {
+        pubYearMap.set(yr, item.count);
+      }
+    }
+
+    const publicationGrowth: Array<{ year: number; count: number; growthRate: number | null }> = [];
+    let prevCount: number | null = null;
+    let peakYear: number | null = null;
+    let peakPublications = 0;
+
+    for (let yr = fromYear; yr <= toYear; yr++) {
+      const count = pubYearMap.get(yr) ?? 0;
+      let growthRate: number | null = null;
+      if (prevCount !== null && prevCount > 0) {
+        growthRate = Math.round(((count - prevCount) / prevCount) * 100);
+      }
+      publicationGrowth.push({ year: yr, count, growthRate });
+      prevCount = count;
+
+      if (count > peakPublications) {
+        peakPublications = count;
+        peakYear = yr;
+      }
+    }
+
+    const firstYearCount = publicationGrowth[0]?.count ?? 0;
+    const lastYearCount = publicationGrowth[publicationGrowth.length - 1]?.count ?? 0;
+    const growthPercentage =
+      firstYearCount > 0
+        ? Math.round(((lastYearCount - firstYearCount) / firstYearCount) * 100)
+        : 0;
+
+    const highlyCitedWorks = (topWorksResponse.results || []).map((w) => this.normalizeWork(w));
+
+    const citationYearMap = new Map<number, number>();
+    for (let yr = fromYear; yr <= toYear; yr++) {
+      citationYearMap.set(yr, 0);
+    }
+
+    for (const work of topWorksResponse.results || []) {
+      for (const c of work.counts_by_year || []) {
+        if (c.year >= fromYear && c.year <= toYear) {
+          citationYearMap.set(c.year, (citationYearMap.get(c.year) ?? 0) + c.cited_by_count);
+        }
+      }
+    }
+
+    const citationActivity = Array.from(citationYearMap.entries())
+      .map(([year, citations]) => ({ year, citations }))
+      .sort((a, b) => a.year - b.year);
+
+    const topAuthors: NormalizedAuthor[] = (authorsResponse.results || []).map((author) => ({
+      id: this.normalizeId(author.id),
+      name: author.display_name,
+      institution: author.last_known_institutions?.[0]?.display_name ?? null,
+      worksCount: author.works_count ?? 0,
+      citedByCount: author.cited_by_count ?? 0,
+      hIndex: author.summary_stats?.h_index ?? null,
+      i10Index: author.summary_stats?.i10_index ?? null,
+    }));
+
+    const relatedTopics = (siblingTopicsResponse || []).map((t) => ({
+      id: t.id,
+      name: t.name,
+      worksCount: t.worksCount,
+      citedByCount: t.citedByCount,
+      subfield: t.subfield?.name ?? null,
+    }));
+
+    return {
+      topic,
+      timeRange: { fromYear, toYear },
+      metrics: {
+        totalPublications: topic.worksCount,
+        totalCitations: topic.citedByCount,
+        avgCitationsPerPaper:
+          topic.worksCount > 0 ? Number((topic.citedByCount / topic.worksCount).toFixed(1)) : 0,
+        growthPercentage,
+        peakYear,
+        peakPublications,
+      },
+      publicationGrowth,
+      citationActivity,
+      topAuthors,
+      highlyCitedWorks,
+      relatedTopics,
+    };
+  }
+
+  private normalizeTopic(topic: OpenAlexTopic): NormalizedTopic {
+    const openAlexId = this.normalizeId(topic.id);
+    return {
+      id: openAlexId,
+      openAlexId,
+      name: topic.display_name,
+      description: topic.description || '',
+      keywords: topic.keywords ?? [],
+      subfield: topic.subfield ? { id: this.normalizeId(topic.subfield.id), name: topic.subfield.display_name } : null,
+      field: topic.field ? { id: this.normalizeId(topic.field.id), name: topic.field.display_name } : null,
+      domain: topic.domain ? { id: this.normalizeId(topic.domain.id), name: topic.domain.display_name } : null,
+      worksCount: topic.works_count ?? 0,
+      citedByCount: topic.cited_by_count ?? 0,
+      siblings: (topic.siblings ?? []).map((sibling) => ({
+        id: this.normalizeId(sibling.id),
+        name: sibling.display_name,
+      })),
+    };
+  }
+
   private normalizeWork(work: OpenAlexWork): NormalizedWork {
     const openAlexId = this.normalizeId(work.id);
     return {
@@ -170,6 +379,10 @@ export class OpenAlexService {
       isRetracted: Boolean(work.is_retracted),
       referencedWorkIds: (work.referenced_works ?? []).map((reference) => this.normalizeId(reference)),
       relatedWorkIds: (work.related_works ?? []).map((related) => this.normalizeId(related)),
+      countsByYear: (work.counts_by_year ?? []).map((entry) => ({
+        year: entry.year,
+        citedByCount: entry.cited_by_count,
+      })),
     };
   }
 

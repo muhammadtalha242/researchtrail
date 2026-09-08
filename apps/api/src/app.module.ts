@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { LibraryModule } from './library/library.module';
 import { OpenAlexModule } from './openalex/openalex.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { TrendsModule } from './trends/trends.module';
 import { WorksModule } from './works/works.module';
 
 @Module({
@@ -17,6 +18,7 @@ import { WorksModule } from './works/works.module';
     AuthModule,
     WorksModule,
     LibraryModule,
+    TrendsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

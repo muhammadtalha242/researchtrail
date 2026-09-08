@@ -69,3 +69,58 @@ export type Collection = {
   description: string | null;
   works: Array<{ savedWork: SavedWork }>;
 };
+
+export type NormalizedTopic = {
+  id: string;
+  openAlexId: string;
+  name: string;
+  description: string;
+  keywords: string[];
+  subfield: { id: string; name: string } | null;
+  field: { id: string; name: string } | null;
+  domain: { id: string; name: string } | null;
+  worksCount: number;
+  citedByCount: number;
+  siblings: Array<{ id: string; name: string }>;
+};
+
+export type NormalizedAuthor = {
+  id: string;
+  name: string;
+  institution: string | null;
+  worksCount: number;
+  citedByCount: number;
+  hIndex: number | null;
+  i10Index: number | null;
+};
+
+export type TopicTrendsResponse = {
+  topic: NormalizedTopic;
+  timeRange: { fromYear: number; toYear: number };
+  metrics: {
+    totalPublications: number;
+    totalCitations: number;
+    avgCitationsPerPaper: number;
+    growthPercentage: number;
+    peakYear: number | null;
+    peakPublications: number;
+  };
+  publicationGrowth: Array<{
+    year: number;
+    count: number;
+    growthRate: number | null;
+  }>;
+  citationActivity: Array<{
+    year: number;
+    citations: number;
+  }>;
+  topAuthors: NormalizedAuthor[];
+  highlyCitedWorks: Work[];
+  relatedTopics: Array<{
+    id: string;
+    name: string;
+    worksCount: number;
+    citedByCount: number;
+    subfield: string | null;
+  }>;
+};

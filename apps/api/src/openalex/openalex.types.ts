@@ -29,6 +29,7 @@ export type OpenAlexWork = {
     oa_status?: string | null;
     oa_url?: string | null;
   } | null;
+  counts_by_year?: Array<{ year: number; cited_by_count: number }>;
 };
 
 export type NormalizedWork = {
@@ -51,4 +52,86 @@ export type NormalizedWork = {
   isRetracted: boolean;
   referencedWorkIds: string[];
   relatedWorkIds: string[];
+  countsByYear?: Array<{ year: number; citedByCount: number }>;
+};
+
+export type OpenAlexTopic = {
+  id: string;
+  display_name: string;
+  description?: string | null;
+  keywords?: string[];
+  subfield?: { id: string; display_name: string } | null;
+  field?: { id: string; display_name: string } | null;
+  domain?: { id: string; display_name: string } | null;
+  works_count?: number;
+  cited_by_count?: number;
+  siblings?: Array<{ id: string; display_name: string }>;
+};
+
+export type NormalizedTopic = {
+  id: string;
+  openAlexId: string;
+  name: string;
+  description: string;
+  keywords: string[];
+  subfield: { id: string; name: string } | null;
+  field: { id: string; name: string } | null;
+  domain: { id: string; name: string } | null;
+  worksCount: number;
+  citedByCount: number;
+  siblings: Array<{ id: string; name: string }>;
+};
+
+export type OpenAlexAuthor = {
+  id: string;
+  display_name: string;
+  works_count?: number;
+  cited_by_count?: number;
+  last_known_institutions?: Array<{ id?: string; display_name: string }>;
+  summary_stats?: {
+    h_index?: number;
+    i10_index?: number;
+    '2yr_mean_citedness'?: number;
+  };
+};
+
+export type NormalizedAuthor = {
+  id: string;
+  name: string;
+  institution: string | null;
+  worksCount: number;
+  citedByCount: number;
+  hIndex: number | null;
+  i10Index: number | null;
+};
+
+export type TopicTrendsResponse = {
+  topic: NormalizedTopic;
+  timeRange: { fromYear: number; toYear: number };
+  metrics: {
+    totalPublications: number;
+    totalCitations: number;
+    avgCitationsPerPaper: number;
+    growthPercentage: number;
+    peakYear: number | null;
+    peakPublications: number;
+  };
+  publicationGrowth: Array<{
+    year: number;
+    count: number;
+    growthRate: number | null;
+  }>;
+  citationActivity: Array<{
+    year: number;
+    citations: number;
+  }>;
+  topAuthors: NormalizedAuthor[];
+  highlyCitedWorks: NormalizedWork[];
+  relatedTopics: Array<{
+    id: string;
+    name: string;
+    worksCount: number;
+    citedByCount: number;
+    subfield: string | null;
+  }>;
 };
