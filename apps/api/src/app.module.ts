@@ -2,10 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { AuthModule } from './auth/auth.module';
-import { LibraryModule } from './library/library.module';
 import { OpenAlexModule } from './openalex/openalex.module';
-import { PrismaModule } from './prisma/prisma.module';
 import { TrendsModule } from './trends/trends.module';
 import { WorksModule } from './works/works.module';
 
@@ -13,11 +10,8 @@ import { WorksModule } from './works/works.module';
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 60 }]),
-    PrismaModule,
     OpenAlexModule,
-    AuthModule,
     WorksModule,
-    LibraryModule,
     TrendsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

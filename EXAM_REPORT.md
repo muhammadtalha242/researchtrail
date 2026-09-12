@@ -2,7 +2,7 @@
 
 ## Submission metadata
 
-- **Title:** ResearchTrail — Academic Discovery and Personal Research Library
+- **Title:** ResearchTrail — Academic Discovery and Trend Exploration
 - **Student ID number:** TODO — student must complete
 - **Deployment URL:** TODO — student must complete after deployment
 - **Estimated total development time:** TODO — student must complete
@@ -14,25 +14,22 @@
 - [x] Privacy information integrated at `/privacy` and linked globally.
 - [x] Accessibility statement integrated at `/accessibility` and linked globally.
 - [x] [University of Göttingen legal notice](https://www.uni-goettingen.de/de/439238.html) linked globally and from both statements.
-- [x] `README.md` contains system dependencies, local dependency installation, database migration, development, build and production-run instructions.
+- [x] `README.md` documents system dependencies, dependency installation, configuration, development, build and production-run instructions.
 - [ ] Source submission completed: grant `lorenz.glissmann@uni-goettingen.de` access to the repository stated above, or attach a `.zip` file.
-- [ ] Replace the operator/contact placeholders in the privacy and accessibility pages before public deployment.
+- [ ] Operator, contact, hosting and retention placeholders completed before public deployment.
 
 ## Abstract
 
-ResearchTrail is a full-stack web application for students, researchers and other readers who need to discover and organise scholarly literature. It uses OpenAlex metadata to support keyword and topic search, publication filtering, detail inspection, trend analysis and one-hop citation exploration. Users can browse without an account. Registered users additionally maintain a private library, assign reading states, write notes and group publications into collections. The project addresses the common problem of moving from a broad research question to a manageable reading trail without attempting to replace specialist reference managers or bibliometric analysis software. Its scope deliberately prioritises a clear end-to-end architecture, usable research workflows, protected user-specific data and transparent limitations over speculative recommendation or PDF-processing features. ResearchTrail is suitable as an educational demonstrator; a public deployment still requires the named operator, hosting and retention details identified in its privacy notice.
+ResearchTrail is a full-stack web application for students, researchers and other readers who need to discover and understand scholarly literature. It uses OpenAlex metadata to support keyword search, filtering, publication inspection, topic-trend analysis and bounded citation exploration. A user can move from a broad query to individual works, follow related publications and references, or compare publication and citation activity over a chosen period. The application is intentionally stateless: it does not create user profiles, retain searches or store publication data. This design keeps the workflow immediate, reduces operational complexity and limits personal-data processing while still demonstrating a complete browser–API–external-service architecture. The project prioritises clear data normalisation, responsive and accessible interaction, honest descriptions of visualisation limits and robust handling of upstream failures. ResearchTrail is suitable as an educational demonstrator; public operation still requires the controller, hosting and retention details identified in the integrated privacy information.
 
-## Range of functions
+## Overview of the range of functions
 
 - Search OpenAlex works by title, topic, author terms or DOI-like input.
 - Filter by publication year and open-access status; sort by relevance, date or citation count.
-- Browse paginated normalised publication results.
-- Inspect publication metadata, reconstructed abstracts, authors, topics, sources and related works.
-- Explore a bounded citation/reference graph with a non-graphical publication list alternative.
-- Analyse topic publication growth, citation activity, influential authors, related topics and landmark works.
-- Register and sign in with a password-protected account.
-- Save and remove works, edit notes and reading status, and organise works into collections.
-- Erase an account and its stored data through the privacy page.
+- Browse paginated, normalised publication results with explicit loading, error and empty states.
+- Inspect metadata, reconstructed abstracts, authors, topics, source links and related works.
+- Explore a bounded citation/reference graph with a keyboard-accessible publication list alternative.
+- Analyse topic publication growth, citation activity, influential authors, related topics and highly cited works.
 - Access integrated privacy and accessibility statements and the university legal notice from every view.
 
 ## Architecture
@@ -42,162 +39,129 @@ ResearchTrail is a full-stack web application for students, researchers and othe
 | Layer | Technology | Responsibility |
 | --- | --- | --- |
 | Browser UI | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4 | Views, navigation, forms, visualisation and server-state rendering |
-| Client data | TanStack Query | Loading/error state, caching, mutations and invalidation |
+| Client data | TanStack Query | Loading/error state, request caching and refetch control |
 | Graph | Cytoscape.js | Interactive citation graph rendering |
-| HTTP API | NestJS 11, TypeScript, class-validator, Passport JWT | Routes, validation, authentication, authorisation and orchestration |
-| Persistence | PostgreSQL 16, Prisma ORM 7 | Account, saved-work, note, status and collection storage |
+| HTTP API | NestJS 11, TypeScript, class-validator, NestJS Throttler | Routes, validation, rate limiting and orchestration |
 | External data | OpenAlex REST API | Scholarly works, topics, authors, citations and references |
 
 ### System structure
 
 ```mermaid
 flowchart LR
-    U["Browser user"] -->|"HTTPS / UI"| W["Next.js frontend"]
-    W -->|"JSON + Bearer JWT"| A["NestJS API"]
-    A -->|"Prisma queries"| P[("PostgreSQL")]
-    A -->|"Server-side HTTPS requests"| O["OpenAlex API"]
-    A --> V["Validation + rate limiting"]
-    A --> G["JWT authentication + ownership checks"]
+    U["Browser user"] -->|"HTTPS and UI"| W["Next.js frontend"]
+    W -->|"Read-only JSON requests"| A["NestJS API"]
+    A -->|"Validated server-side HTTPS requests"| O["OpenAlex API"]
+    A --> V["Validation, rate limiting and error mapping"]
 ```
 
-The application is a modular client–server system. Next.js owns presentation and interactions; NestJS is the only trust boundary for validation and data access; Prisma encapsulates persistence; `OpenAlexService` is an anti-corruption/adapter layer that hides external response shapes from the rest of the app.
+The application is a stateless client–server system. Next.js owns presentation and browser interaction. NestJS is the controlled boundary for input validation, request limits and external-data access. `OpenAlexService` is an adapter that hides OpenAlex response shapes and gives the rest of the application stable, normalised domain objects. There is no application persistence layer.
 
 ### Project-wide decisions
 
-1. **OpenAlex access is backend-only.** This keeps the API key outside browser bundles, centralises timeouts/error translation and gives the frontend one stable normalised model.
-2. **A bounded graph is used.** Eight references and eight citing works make load time and visual complexity predictable. It is an exploratory aid, not a complete bibliometric graph.
-3. **Server state is distinct from component state.** TanStack Query handles asynchronous remote data; local React state handles form drafts and visual interactions. This avoids duplicated loading/cache logic.
-4. **Relational ownership is explicit.** Every saved work and collection has a `userId`; every protected mutation verifies ownership. Cascading relations make account erasure complete at the application database level.
-5. **Styling uses two levels.** Base and reusable component rules live in separate CSS files; page-specific composition uses colocated Tailwind utilities. This provides consistent focus/controls without building a premature component framework.
-6. **Scope is deliberately constrained.** Recommendations, PDF analysis, collaboration, background jobs and Redis were excluded so the implemented research workflow remains correct and maintainable within a semester project.
+1. **OpenAlex access is backend-only.** The API key stays outside browser bundles, timeouts and upstream errors are translated once, and the UI consumes one stable model.
+2. **The application is stateless.** Removing profile and persistence features reduces collected data, dependencies, security surface and deployment requirements.
+3. **The citation graph is bounded.** Eight references and eight citing works make response time and visual complexity predictable. It is an exploration aid, not a complete bibliometric graph.
+4. **Server state is distinct from view state.** TanStack Query manages remote loading and caching; local React state manages form drafts and visual interactions.
+5. **Styling uses two levels.** Base and reusable component rules live in separate CSS files; page composition uses colocated Tailwind utilities.
+6. **Scope is deliberately constrained.** Recommendations, PDF analysis, collaboration and background jobs were excluded so the implemented workflow remains maintainable within a semester project.
 
-This stack is suitable because TypeScript spans both services, NestJS provides a clear module/security boundary, PostgreSQL models user ownership and many-to-many collections reliably, and Next.js/React support the dynamic filters and graphs required by the idea. The trade-off is two deployable processes and more configuration than a purely server-rendered monolith.
+The stack is suitable because TypeScript spans both applications, NestJS offers clear module boundaries and validation, and Next.js/React support the dynamic filters and graphs required by the idea. Stateless operation simplifies deployment and privacy responsibilities. The trade-off is dependence on OpenAlex availability and two deployed processes instead of a single monolith.
 
 ## Frontend
 
 ### Structure and responsibilities
 
 - `app/`: route-level views, metadata and layouts.
-- `components/`: shared header, footer, authentication provider, query provider, publication card and privacy controls.
+- `components/`: shared header, footer, query provider, result card and visualisation components.
 - `lib/`: HTTP client and shared frontend response types.
-- `styles/base.css`: document defaults, keyboard focus and reduced-motion behavior.
+- `styles/base.css`: document defaults, keyboard focus and reduced-motion behaviour.
 - `styles/components.css`: reusable buttons, inputs, cards, panels, navigation and legal-document typography.
 
-The frontend validates basic form constraints, builds query parameters, renders loading/error/empty states, stores the current JWT/profile locally, performs authenticated mutations and visualises normalised API responses. Security-sensitive validation and ownership checks are repeated authoritatively on the API.
+The frontend builds query parameters, enforces basic form constraints, renders asynchronous states, caches remote reads and visualises normalised API responses. It stores no user identity or research records. The API repeats all authoritative validation.
 
 ### Views and interaction options
 
 | View | Main interactions |
 | --- | --- |
-| Discovery `/` | Search, year/open-access filters, sort, paginate, open/save a result |
-| Trends `/trends` | Topic autocomplete, preset/custom range, switch charts and pivot topic |
-| Publication `/works/:id` | Read metadata/abstract, follow source/PDF, open graph or related work |
+| Discovery `/` | Search, set year/open-access filters, sort, paginate and open a result |
+| Trends `/trends` | Search topics, choose preset/custom ranges, switch charts and pivot to a related topic |
+| Publication `/works/:id` | Read metadata/abstract, follow source/PDF links, open the graph or a related work |
 | Citation explorer `/graph/:id` | Select graph nodes or use the keyboard-accessible publication list |
-| Library `/library` | Create collections, edit notes/status, assign or remove saved works |
-| Login/register | Authenticate or create an account |
-| Privacy/accessibility | Read notices, erase an account, follow the legal notice |
+| Privacy/accessibility | Read the notices and follow the university legal notice |
 
-Next.js generates the HTML through React Server and Client Components. Data-heavy interactive views are Client Components because they require query state and browser events. Tailwind utilities and the separated CSS layers implement responsive styling without a runtime CSS-in-JS dependency.
+Next.js generates HTML through React Server and Client Components. Interactive, data-heavy views are Client Components because they require query state and browser events. Tailwind utilities plus the separate CSS layers provide responsive styling without a runtime CSS-in-JS dependency.
 
 ### Frontend challenges
 
-- OpenAlex abstracts are not plain strings, so reconstruction is done centrally before display.
-- Dense scholarly metadata must remain scannable on narrow screens and at zoom.
-- Citation and trend visualisations require both visual clarity and meaningful alternatives for non-pointer/non-visual use.
-- Topic autocomplete needs independent draft and committed query state to avoid refetching the complete dashboard on every keystroke.
+- Dense scholarly metadata must remain scannable on small screens and at browser zoom.
+- Citation and trend visualisations need meaningful non-pointer and non-visual alternatives.
+- Topic autocomplete needs separate draft and committed state to avoid rebuilding the full dashboard on every keystroke.
+- Upstream loading, empty and failure states must be clear without interrupting navigation.
 
 ## Backend
 
 ### Structure and responsibilities
 
-- `AuthModule`: registration, password verification, JWT creation and account data controls.
-- `WorksModule`: discovery, work detail, related work and graph endpoints.
+- `WorksModule`: discovery, publication detail, related-work and graph endpoints.
 - `TrendsModule`: topic lookup and trend analytics endpoints.
-- `LibraryModule`: protected saved-work and collection operations with ownership checks.
-- `OpenAlexModule`: external HTTP adapter, normalisation, timeouts and fallback behavior.
-- `PrismaModule`: database connection lifecycle.
-- `common/`: JWT guard and typed current-user decorator.
+- `OpenAlexModule`: external HTTP adapter, normalisation, timeout handling and error translation.
 
-Global request validation strips or rejects unexpected fields and converts supported query primitives. Global throttling limits a client to 60 requests per minute. CORS is restricted to configured/local frontend origins.
+Global request validation rejects unexpected fields and converts supported query primitives. Global throttling limits a client to 60 requests per minute. CORS is restricted to the configured/local frontend origins. Every route is read-only from the application’s perspective.
 
 ### Communication interfaces and APIs
 
-All endpoints use JSON below the `/api` prefix. `400` denotes invalid input, `401` invalid/missing authentication, `404` a missing or non-owned resource, `409` a uniqueness conflict and `502` an OpenAlex failure.
+All endpoints return JSON below the `/api` prefix. `400` denotes invalid input, `404` a missing external resource and `502` an OpenAlex failure.
 
-| Method | Route | Protection | Purpose |
-| --- | --- | --- | --- |
-| POST | `/auth/register` | Public | Create account and JWT session |
-| POST | `/auth/login` | Public | Verify credentials and return session |
-| DELETE | `/auth/account` | JWT | Erase the account and dependent records |
-| GET | `/search` | Public | Search works with filters, sorting and pagination |
-| GET | `/works/:id` | Public | Normalised work and up to six related works |
-| GET | `/works/:id/graph` | Public | Centre work, up to eight references and eight citations |
-| GET | `/trends` | Public | Topic metrics for a supplied range |
-| GET | `/trends/topics` | Public | Topic autocomplete results |
-| GET | `/trends/topic/:id` | Public | One normalised topic |
-| GET/POST | `/library` | JWT | List or save works |
-| PATCH/DELETE | `/library/:id` | JWT + owner | Edit or remove a saved work |
-| GET/POST | `/collections` | JWT | List or create collections |
-| DELETE | `/collections/:id` | JWT + owner | Delete a collection |
-| POST | `/collections/:id/works` | JWT + owner | Add an owned saved work |
-| DELETE | `/collections/:id/works/:savedWorkId` | JWT + owner | Remove a collection link |
+| Method | Route | Purpose |
+| --- | --- | --- |
+| GET | `/search` | Search works with filters, sorting and pagination |
+| GET | `/works/:id` | Return one normalised work and up to six related works |
+| GET | `/works/:id/graph` | Return the centre work, up to eight references and eight citing works |
+| GET | `/trends` | Return topic metrics for a supplied date range |
+| GET | `/trends/topics` | Return topic autocomplete results |
+| GET | `/trends/topic/:id` | Return one normalised topic |
 
-The external adapter calls OpenAlex `/works`, `/topics` and `/authors`. It transfers search/topic filters and OpenAlex identifiers; normalised scholarly metadata returns to the browser. The API key stays server-side.
+The external adapter calls OpenAlex `/works`, `/topics` and `/authors`. Search terms, topic filters and OpenAlex identifiers are transferred to provide the requested results. Normalised scholarly metadata returns to the browser; the OpenAlex API key remains server-side.
 
-### Authentication and authorisation
+### Identity and access control
 
-Registration is optional for browsing but required for the personal library and account controls. Passwords are hashed with bcrypt cost 12 and never returned. Successful authentication creates a seven-day signed JWT; Passport verifies signature and expiry. Protected controllers derive `userId` from the verified token rather than request input. Service queries include that `userId`, preventing access to another user's records even if an identifier is guessed. A production review should replace browser local-storage tokens with secure, HTTP-only same-site cookies or document and accept the residual XSS exposure.
+The application has no user profiles, protected user areas or write operations. All implemented routes expose only public scholarly metadata obtained from OpenAlex. Consequently there are no identities to verify and no user-owned resources requiring permission checks. Input validation, request throttling and restricted CORS remain necessary protections for service availability and predictable API use.
 
-### Database
+### Data storage
 
-```mermaid
-erDiagram
-    USER ||--o{ SAVED_WORK : owns
-    USER ||--o{ COLLECTION : owns
-    SAVED_WORK ||--o{ COLLECTION_WORK : linked_by
-    COLLECTION ||--o{ COLLECTION_WORK : contains
-```
+ResearchTrail has no application database and does not persist queries or OpenAlex responses. Data exists only transiently in process memory and client request caches while results are displayed. This is appropriate for the implemented read-only discovery workflow and removes schema migration, backup and user-record erasure concerns. Infrastructure providers may retain access logs separately according to the documented deployment configuration.
 
-- `User`: UUID, unique email, optional name, bcrypt hash and timestamps.
-- `SavedWork`: owner, unique owner/OpenAlex pair, cached publication JSON/metadata, status, note and timestamps.
-- `Collection`: owner, owner-unique name, optional description and timestamps.
-- `CollectionWork`: composite-key join table with cascading foreign keys.
+### Backend technical implementation and challenges
 
-Prisma was chosen for typed queries and explicit migrations; PostgreSQL provides referential integrity, JSON support for external metadata and reliable transactional persistence.
+NestJS was selected for explicit modules, dependency injection, DTO validation and consistent HTTP error handling. `class-validator` checks query parameters and NestJS Throttler limits abusive request rates. Native server-side `fetch` avoids another HTTP-client dependency.
 
-### Backend challenges
-
-- OpenAlex IDs arrive as URLs or short IDs and must be normalised consistently.
-- Abstract inverted indexes must be rebuilt in word-position order.
-- Citation graph calls combine centre, reference and citing-work requests while deduplicating nodes.
-- Trend data combines grouped counts, top works, author statistics and sibling topics; partial optional datasets degrade to empty sections while primary lookup failures stay visible.
-- Every user-owned operation must constrain by both resource ID and authenticated owner.
+OpenAlex IDs arrive as URLs or short identifiers and must be normalised consistently. Abstract inverted indexes must be rebuilt in word-position order. Citation graph responses combine centre, reference and citing-work requests while deduplicating nodes. Trend responses combine grouped counts, top works, author statistics and related topics; optional datasets degrade to empty sections while primary lookup failures remain visible.
 
 ## Accessibility
 
-The target is WCAG 2.2 AA and relevant EN 301 549 requirements. Implemented measures include semantic `main`, `nav`, `section`, heading and form elements; a skip link; visible focus; labelled inputs; autocomplete metadata; current-page navigation; text plus icons; accessible names for icon-only buttons; `role="status"`/`role="alert"`; reduced-motion behavior; improved control and status contrast; responsive layouts; screen-reader data tables for trend charts; and a link list alternative to the citation canvas.
+The target is WCAG 2.2 AA and the relevant EN 301 549 requirements. Implemented measures include semantic landmarks and headings, a skip link, visible focus, labelled inputs, current-page navigation, text alongside icons, accessible names for controls, status/error announcements, reduced-motion behaviour, responsive layouts, textual trend summaries and a link-list alternative to the citation canvas.
 
-Verification should combine ESLint/build checks, keyboard-only navigation, browser accessibility tooling, 200%/400% zoom, contrast inspection and screen-reader passes with VoiceOver/Safari and NVDA/Firefox. The current limitations are documented in the integrated statement. Most importantly, the graph list does not yet encode all edge relationships, and full assistive-technology/user testing remains outstanding.
+Verification combines ESLint/build checks, keyboard-only navigation, responsive inspection, browser accessibility checks and manual contrast/focus review. The release checklist also calls for testing at 200% and 400% zoom and with VoiceOver/Safari and NVDA/Firefox. Remaining limitations are stated openly: the graph list does not encode every edge relationship, chart pointer interactions are more convenient than their alternatives, third-party content is outside project control, and testing with disabled users is still outstanding.
 
 ## Data protection
 
-Privacy by design is reflected in optional accounts for public browsing, collection only of an email and optional name, bcrypt password hashing, server-side API keys, strict DTO validation, request throttling, user-scoped authorisation, omission of password hashes from responses, no intentional search-history persistence, no analytics/advertising integration and database cascades for erasure. HTTPS is a deployment requirement.
+Privacy by design is primarily implemented through data minimisation. The application has no profiles, personal records, write endpoints, application database, advertising, analytics or intentional search-history storage. The OpenAlex key remains server-side, DTO validation rejects unexpected input, requests are rate-limited and HTTPS is required in production.
 
-The application database processes account identity, authentication hashes, saved-publication metadata, reading status, free-text notes, collections and timestamps. The browser stores an access token and basic profile. Web/API infrastructure necessarily processes IP addresses and request metadata and may log them. Search terms are proxied to OpenAlex. No special-category data is requested, but users could put it into free-text notes or queries and are warned not to do so.
+Web and API infrastructure necessarily processes IP addresses, timestamps, requested resources, status codes and user-agent data and may log them. Search terms, filters and OpenAlex identifiers are proxied to OpenAlex. Source/PDF providers receive connection data only when a user follows a link. The application does not request special-category data, but a user could enter personal or sensitive information in a search query and is advised not to do so.
 
-Self-service functions cover erasure (account deletion) and rectification/erasure of library notes, status and saved items. Data access, portability, account email/name rectification, restriction, objection and questions about host logs require manual contact with the controller. Before deployment the operator must complete controller/contact, host, location, processor, legal-basis, log-retention and supervisory-authority details. The integrated policy deliberately calls out these gaps instead of making unsupported compliance claims.
+There are no application-held user records for automatic access, rectification, portability or erasure. Rights relating to hosting logs or other operator-held data require manual contact with the controller. Before deployment, the operator must complete the controller/contact, host, processing-location, processor, legal-basis, log-retention and supervisory-authority details in the privacy information.
 
 ## Evaluation audit
 
 | Criterion | Status | Evidence / remaining work |
 | --- | --- | --- |
-| Functional completeness | **Met for declared scope** | Discovery, trends, details, graph, auth and library routes are implemented; excluded features are stated. End-to-end tests with live DB/OpenAlex are still desirable. |
-| Correctness | **Mostly met** | DTO validation, ownership constraints, normalisation and error states exist. Automated unit/integration coverage is the largest remaining engineering gap. |
-| Appropriateness | **Met** | Stack and bounded semester scope match a data-driven interactive web app. |
-| Code quality | **Mostly met** | Strict TypeScript, modules, reusable components/services, separated style layers and lint/build scripts. The large trends view should be split into chart/section components in a later refactor. |
-| Architecture | **Met** | Trust boundaries, modules, external adapter, relational model and rationale are documented above. |
-| Strategic decisions | **Met** | Six cross-project decisions and their trade-offs are recorded above. |
-| Usability | **Mostly met** | Responsive navigation, explicit loading/error/empty states and focused workflows. Formal task-based usability testing remains outstanding. |
-| Accessibility | **Mostly met** | Integrated statement and concrete WCAG-oriented improvements. Screen-reader/user testing and richer graph equivalence remain outstanding. |
-| Data protection | **Partially met pending deployment details** | Data minimisation, hashing, authorisation, account erasure and policy exist. Data access/portability requires manual handling; replace local-storage JWTs and complete controller/host/retention details before production. |
-| Legal submission items | **Partially met** | All three legal links/pages are integrated; student metadata, contact placeholders and repository access remain manual checklist items. |
+| Functional completeness | **Met for declared scope** | Discovery, trends, publication detail and graph routes are implemented; excluded features are stated. Live-API end-to-end tests remain desirable. |
+| Correctness | **Mostly met** | DTO validation, identifier normalisation and explicit error states exist. Automated unit/integration coverage is the largest engineering gap. |
+| Appropriateness | **Met** | The stack and bounded, stateless scope fit a data-driven academic discovery application. |
+| Code quality | **Mostly met** | Strict TypeScript, focused modules, reusable components/services, separated style layers and lint/build scripts. The large trends view is still a refactoring candidate. |
+| Architecture | **Met** | Trust boundaries, modules, external adapter, stateless data flow and trade-offs are documented above. |
+| Strategic decisions | **Met** | Six cross-project decisions and their rationale are recorded above. |
+| Usability | **Mostly met** | Responsive navigation and explicit loading, failure and empty states support focused workflows. Formal task-based usability testing remains outstanding. |
+| Accessibility | **Mostly met** | Integrated statement and WCAG-oriented implementation exist. Screen-reader/user testing and richer graph equivalence remain outstanding. |
+| Data protection | **Partially met pending deployment details** | Strong data minimisation and an integrated notice exist; controller, host, legal-basis and log-retention details must be completed before production. |
+| Legal submission items | **Partially met** | All required legal links/pages are integrated; student metadata, contact placeholders and repository access remain manual checklist items. |

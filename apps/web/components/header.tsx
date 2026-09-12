@@ -1,12 +1,10 @@
 'use client';
 
-import { BarChart3, BookOpen, Library, LogIn, LogOut, Search } from 'lucide-react';
+import { BarChart3, BookOpen, Search } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from './auth-provider';
 
 export function Header() {
-  const { user, logout, ready } = useAuth();
   const pathname = usePathname();
 
   const current = (href: string) => pathname === href ? 'page' as const : undefined;
@@ -21,12 +19,6 @@ export function Header() {
         <nav aria-label="Primary navigation" className="flex items-center gap-1 text-sm sm:gap-2">
           <Link href="/" aria-current={current('/')} className="nav-link"><Search aria-hidden="true" size={16} /> <span className="hidden sm:inline">Discover</span></Link>
           <Link href="/trends" aria-current={current('/trends')} className="nav-link"><BarChart3 aria-hidden="true" size={16} /> <span className="hidden sm:inline">Trends</span></Link>
-          <Link href="/library" aria-current={current('/library')} className="nav-link"><Library aria-hidden="true" size={16} /> <span className="hidden sm:inline">Library</span></Link>
-          {ready && user ? (
-            <button onClick={logout} className="nav-link"><LogOut aria-hidden="true" size={16} /> <span className="hidden sm:inline">Sign out</span></button>
-          ) : (
-            <Link href="/login" aria-current={current('/login')} className="nav-link"><LogIn aria-hidden="true" size={16} /> <span className="hidden sm:inline">Sign in</span></Link>
-          )}
         </nav>
       </div>
     </header>

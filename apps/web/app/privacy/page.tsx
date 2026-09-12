@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { PrivacyControls } from '@/components/privacy-controls';
 
 export const metadata: Metadata = {
   title: 'Privacy information | ResearchTrail',
@@ -34,21 +33,22 @@ export default function PrivacyPage() {
         <h2>2. Data processed and purposes</h2>
         <ul>
           <li><strong>Server access data:</strong> IP address, request time, requested resource, status and user agent may be processed by the web/API host for secure delivery, troubleshooting and abuse prevention.</li>
-          <li><strong>Account data:</strong> email address, optional display name, a one-way password hash, account timestamps and authentication metadata are used to create and protect an account.</li>
-          <li><strong>Library data:</strong> saved publication metadata, reading status, personal notes, collections and timestamps provide the personal-library features.</li>
-          <li><strong>Search data:</strong> search terms, filters and OpenAlex identifiers are sent to the ResearchTrail API and then to OpenAlex to retrieve academic metadata. ResearchTrail does not intentionally persist search history in its database.</li>
-          <li><strong>Browser storage:</strong> the access token and basic account profile are stored in local storage so the user remains signed in. No advertising or analytics cookies are set by the application.</li>
+          <li><strong>Search data:</strong> search terms, filters and OpenAlex identifiers are sent to the ResearchTrail API and then to OpenAlex to retrieve academic metadata. ResearchTrail does not intentionally persist search history.</li>
+          <li><strong>Third-party links:</strong> source and PDF links contact the linked provider only after the user activates them. The provider then receives connection data such as the IP address and user agent.</li>
         </ul>
-        <p>ResearchTrail does not request special categories of personal data. Users should not put sensitive personal information into notes or search queries.</p>
+        <p>
+          ResearchTrail has no user accounts, personal storage, application database, analytics or advertising, and it
+          does not intentionally set cookies or use browser storage. It does not request special categories of personal
+          data. Users should not enter personal or sensitive information into search queries.
+        </p>
       </section>
 
       <section>
         <h2>3. Legal basis, recipients and transfers</h2>
         <p>
-          The final operator must determine and document the applicable GDPR legal basis before deployment. For a
-          voluntary student demonstration, account processing will commonly rely on performance of the service
-          requested by the user (Art. 6(1)(b) GDPR), while essential security logging may rely on legitimate interests
-          (Art. 6(1)(f) GDPR). This assessment must be adapted if the university operates the service.
+          The final operator must determine and document the applicable GDPR legal basis before deployment. Essential
+          delivery and security logging may rely on legitimate interests (Art. 6(1)(f) GDPR); this assessment and any
+          additional basis for providing the requested search service must be adapted if the university operates it.
         </p>
         <p>
           Academic queries and identifiers are sent to the OpenAlex API. Source and PDF links lead to third-party
@@ -61,10 +61,10 @@ export default function PrivacyPage() {
       <section>
         <h2>4. Retention and security</h2>
         <p>
-          Account and library data remain until the account is deleted or the operator&apos;s documented retention period
-          expires. Hosting logs must be deleted according to the host&apos;s configured schedule. Passwords are hashed with
-          bcrypt, API inputs are validated, write access is user-scoped, requests are rate-limited and transport
-          encryption (HTTPS) is required in production. No web application can guarantee absolute security.
+          ResearchTrail does not intentionally retain search terms or OpenAlex responses. Hosting logs must be deleted
+          according to the host&apos;s documented schedule. API inputs are validated, requests are rate-limited, the OpenAlex
+          API key remains on the server and transport encryption (HTTPS) is required in production. No web application
+          can guarantee absolute security.
         </p>
       </section>
 
@@ -72,11 +72,10 @@ export default function PrivacyPage() {
         <h2>5. Your rights and controls</h2>
         <p>
           Depending on the applicable law, data subjects may have rights of access, rectification, erasure, restriction,
-          data portability, objection and complaint to a supervisory authority. Signed-in users can erase their account
-          below. Notes, reading status and saved works can be corrected or removed in the library. Access, portability,
-          account identity rectification and other requests require contacting the operator listed above.
+          data portability, objection and complaint to a supervisory authority. Because ResearchTrail does not maintain
+          user profiles or personal application records, requests concerning infrastructure logs or other operator-held
+          data require contacting the operator listed above. There is no automated self-service process for those logs.
         </p>
-        <PrivacyControls />
       </section>
     </main>
   );

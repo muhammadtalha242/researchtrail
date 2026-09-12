@@ -43,33 +43,6 @@ export type GraphResponse = {
   }>;
 };
 
-export type SavedWork = {
-  id: string;
-  userId: string;
-  openAlexId: string;
-  title: string;
-  abstract: string | null;
-  authors: Array<{ id: string; name: string; institutions: string[] }>;
-  topics: Array<{ id: string; name: string; score: number }>;
-  publicationYear: number | null;
-  publicationType: string | null;
-  venue: string | null;
-  citedByCount: number;
-  isOpenAccess: boolean;
-  doi: string | null;
-  sourceUrl: string | null;
-  status: 'TO_READ' | 'READING' | 'COMPLETED';
-  note: string | null;
-  collectionLinks: Array<{ collection: { id: string; name: string } }>;
-};
-
-export type Collection = {
-  id: string;
-  name: string;
-  description: string | null;
-  works: Array<{ savedWork: SavedWork }>;
-};
-
 export type NormalizedTopic = {
   id: string;
   openAlexId: string;
