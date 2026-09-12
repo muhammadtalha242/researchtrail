@@ -42,7 +42,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-200">OpenAlex research discovery</p>
           <h1 className="mt-3 max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">Find the papers that move your research forward.</h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-indigo-100">Search scholarly metadata, inspect related work, explore a one-hop citation graph, and organise papers in your personal library.</p>
+          <p className="mt-4 max-w-2xl text-lg leading-8 text-indigo-100">Search scholarly metadata, inspect related work, explore a one-hop citation graph, and examine research trends.</p>
           <form onSubmit={submit} role="search" className="mt-8 flex max-w-4xl gap-3 rounded-2xl bg-white/10 p-2 backdrop-blur">
             <div className="relative flex-1">
               <Search aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-600" size={20} />

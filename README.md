@@ -1,27 +1,25 @@
 # ResearchTrail
 
-ResearchTrail is a compact full-stack academic discovery application built around the OpenAlex API. It implements four primary views:
+ResearchTrail is a stateless full-stack academic discovery application built around the OpenAlex API. It provides four core research workflows:
 
-1. **Research Discovery** — keyword search, year filters, open-access filter, sorting and pagination.
-2. **Publication Detail** — metadata, reconstructed abstract, topics, source links and related works.
-3. **Citation Explorer** — a limited one-hop graph of references and citing publications.
-4. **Personal Library** — JWT authentication, saved papers, notes, reading status and collections.
+1. **Research discovery** — keyword search, year filters, open-access filtering, sorting and pagination.
+2. **Publication detail** — metadata, reconstructed abstracts, topics, source links and related works.
+3. **Citation explorer** — a bounded one-hop graph of references and citing publications.
+4. **Topic trends** — publication growth, citation activity, notable authors, related topics and highly cited works.
 
-The implementation deliberately excludes recommendations, PDF analysis, collaboration, Redis and background jobs to keep the semester-project scope manageable.
+The application deliberately has no user-specific or persistent-data features, recommendations, PDF analysis, collaboration, background jobs or analytics. This keeps the semester-project scope focused and minimises personal-data processing.
 
-The detailed course submission and criterion-by-criterion audit are in [EXAM_REPORT.md](./EXAM_REPORT.md).
+The detailed course submission report and criterion-by-criterion audit are in [EXAM_REPORT.md](./EXAM_REPORT.md).
 
 ## Stack
 
 - **Frontend:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, TanStack Query, Cytoscape.js
-- **Backend:** NestJS 11, TypeScript, Passport JWT, class-validator
-- **Database:** PostgreSQL 16, Prisma ORM 7 with the PostgreSQL driver adapter
+- **Backend:** NestJS 11, TypeScript, class-validator, request throttling
 - **External API:** OpenAlex
 
 ## Prerequisites
 
-- Node.js 22+ and npm 10+ ([download Node.js](https://nodejs.org/))
-- Docker Desktop with Docker Compose ([installation instructions](https://docs.docker.com/get-docker/)), or a local PostgreSQL 16 instance
+- Node.js 22 or newer and npm 10 or newer ([download Node.js](https://nodejs.org/))
 - A free OpenAlex API key (create one in your OpenAlex account settings)
 
 Verify the system dependencies:
@@ -29,17 +27,19 @@ Verify the system dependencies:
 ```bash
 node --version
 npm --version
-docker --version
-docker compose version
 ```
 
-## Local setup
+## Development setup
 
-### 1. Install dependencies
+### 1. Install local dependencies
+
+From the repository root:
 
 ```bash
 npm install
 ```
+
+This installs both npm workspaces (`apps/api` and `apps/web`) from the root lockfile.
 
 ### 2. Configure environment variables
 
@@ -48,25 +48,9 @@ cp apps/api/.env.example apps/api/.env
 cp apps/web/.env.example apps/web/.env.local
 ```
 
-Edit `apps/api/.env` and provide:
+Set `OPENALEX_API_KEY` in `apps/api/.env`. The examples already contain suitable local values for `PORT`, `OPENALEX_BASE_URL`, `FRONTEND_URL` and `NEXT_PUBLIC_API_URL`.
 
-- a strong `JWT_SECRET`
-- your `OPENALEX_API_KEY`
-
-### 3. Start PostgreSQL
-
-```bash
-docker compose up -d postgres
-```
-
-### 4. Generate Prisma Client and migrate the database
-
-```bash
-npm run db:generate
-npm run db:migrate -- --name init
-```
-
-### 5. Start frontend and backend
+### 3. Run in development mode
 
 ```bash
 npm run dev
@@ -74,10 +58,10 @@ npm run dev
 
 Open:
 
-- Web: http://localhost:3000
-- API: http://localhost:4000/api
+- Web application: http://localhost:3000
+- API base URL: http://localhost:4000/api
 
-`npm run dev` starts both workspaces with watch mode. To run them separately, use:
+The root command starts both workspaces in watch mode. To run them separately:
 
 ```bash
 npm run dev --workspace @research-trail/api
@@ -91,44 +75,26 @@ npm run lint
 npm run build
 ```
 
-Run the production builds after a successful build:
+After a successful build, run the production services in separate terminals:
 
 ```bash
 npm run start --workspace @research-trail/api
 npm run start --workspace @research-trail/web
 ```
 
-The API requires `DATABASE_URL`, `JWT_SECRET` and (for normal OpenAlex quota) `OPENALEX_API_KEY` at runtime. The frontend uses `NEXT_PUBLIC_API_URL` to locate the API. Deploy both services behind HTTPS and configure `FRONTEND_URL` to the exact public frontend origin.
+The API needs `OPENALEX_API_KEY` at runtime. The frontend uses `NEXT_PUBLIC_API_URL` to locate it. Configure `FRONTEND_URL` to the exact public frontend origin and deploy both services behind HTTPS.
 
 ## API routes
 
-### Public
+All routes are public, read-only JSON endpoints below `/api`:
 
 ```text
-POST /api/auth/register
-POST /api/auth/login
-GET  /api/search?q=...
-GET  /api/works/:id
-GET  /api/works/:id/graph
-GET  /api/trends?q=...
-GET  /api/trends/topics?q=...
-GET  /api/trends/topic/:id
-```
-
-### Authenticated
-
-```text
-GET    /api/library
-POST   /api/library
-PATCH  /api/library/:id
-DELETE /api/library/:id
-
-GET    /api/collections
-POST   /api/collections
-DELETE /api/collections/:id
-POST   /api/collections/:id/works
-DELETE /api/collections/:id/works/:savedWorkId
-DELETE /api/auth/account
+GET /api/search?q=...
+GET /api/works/:id
+GET /api/works/:id/graph
+GET /api/trends?q=... or ?topicId=...
+GET /api/trends/topics?q=...
+GET /api/trends/topic/:id
 ```
 
 ## Project structure
@@ -136,24 +102,20 @@ DELETE /api/auth/account
 ```text
 research-trail/
 ├── apps/
-│   ├── api/              # NestJS, Prisma and OpenAlex adapter
+│   ├── api/              # NestJS API and OpenAlex adapter
 │   └── web/              # Next.js user interface
-├── docker-compose.yml    # PostgreSQL for local development
-├── package.json          # npm workspaces
+├── EXAM_REPORT.md        # Submission report and evaluation audit
+├── package.json          # npm workspace scripts
 └── README.md
 ```
 
-Frontend styles are deliberately separated into `apps/web/styles/base.css` (document defaults, focus and motion preferences) and `apps/web/styles/components.css` (reusable UI and legal-content classes). Page-specific layout remains close to each React view through Tailwind utility classes.
+Frontend styles are separated into `apps/web/styles/base.css` for document defaults, focus and motion preferences, and `apps/web/styles/components.css` for reusable UI and legal-content classes. Page-specific layout remains close to each React view through Tailwind utility classes.
 
-## Prisma generation
-
-The generated Prisma Client is intentionally not committed. Run `npm run db:generate` after installing dependencies and whenever the Prisma schema changes.
-
-## Scope notes
+## Scope and data-flow notes
 
 - OpenAlex abstracts arrive as an inverted index; the backend reconstructs readable text.
 - The graph is intentionally limited to eight references and eight citing works.
-- Citation counts are shown as metadata, not as a scientific-quality score.
-- The frontend never calls OpenAlex directly. All access goes through the backend.
-- Search queries are proxied but not intentionally stored in PostgreSQL.
-- Privacy, accessibility and the University of Göttingen legal notice are linked from every page footer.
+- Citation counts are metadata, not a scientific-quality score.
+- The frontend never calls OpenAlex directly. The backend keeps the OpenAlex API key out of browser bundles and normalises external responses.
+- ResearchTrail does not intentionally persist queries or results and has no application database.
+- Privacy information, the accessibility statement and the University of Göttingen legal notice are linked from every page footer.

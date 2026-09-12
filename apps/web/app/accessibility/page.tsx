@@ -20,8 +20,8 @@ export default function AccessibilityPage() {
         <p>
           The application is partially conformant with WCAG 2.2 AA. The interface uses semantic landmarks and headings,
           associated form labels, visible keyboard focus, a skip link, text alternatives for icon-only controls, status
-          announcements, sufficient control contrast and reduced-motion support. Core search, authentication and library
-          functions are designed for keyboard use and responsive zoom.
+          announcements, sufficient control contrast and reduced-motion support. Core search, publication, graph and
+          trend functions are designed for keyboard use and responsive zoom.
         </p>
       </section>
 

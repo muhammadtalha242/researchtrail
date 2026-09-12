@@ -1,23 +1,8 @@
-'use client';
-
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { BookmarkPlus, ExternalLink, Network } from 'lucide-react';
+import { ExternalLink, Network } from 'lucide-react';
 import Link from 'next/link';
-import { apiFetch, ApiError } from '@/lib/api';
 import { Work } from '@/lib/types';
-import { useAuth } from './auth-provider';
 
 export function WorkCard({ work, compact = false }: { work: Work; compact?: boolean }) {
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
-  const save = useMutation({
-    mutationFn: () => apiFetch('/library', {
-      method: 'POST',
-      body: JSON.stringify({ openAlexId: work.openAlexId, status: 'TO_READ' }),
-    }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['library'] }),
-  });
-
   const authorLine = work.authors.slice(0, 4).map((author) => author.name).join(', ');
 
   return (
@@ -51,21 +36,7 @@ export function WorkCard({ work, compact = false }: { work: Work; compact?: bool
       <div className="mt-5 flex flex-wrap items-center gap-2">
         <Link className="btn-secondary" href={`/graph/${work.openAlexId}`}><Network size={16} /> Citation graph</Link>
         {work.sourceUrl && <a className="btn-secondary" href={work.sourceUrl} target="_blank" rel="noreferrer"><ExternalLink size={16} /> Source</a>}
-        <button
-          className="btn-primary"
-          disabled={save.isPending}
-          onClick={() => {
-            if (!user) {
-              window.location.href = '/login';
-              return;
-            }
-            save.mutate();
-          }}
-        >
-          <BookmarkPlus size={16} /> {save.isPending ? 'Saving…' : save.isSuccess ? 'Saved' : 'Save'}
-        </button>
       </div>
-      {save.error && <p className="mt-3 text-sm text-red-600">{save.error instanceof ApiError ? save.error.message : 'Could not save this paper.'}</p>}
     </article>
   );
 }
