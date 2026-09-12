@@ -39,6 +39,11 @@ export class AuthService {
     return this.createSession({ id: user.id, email: user.email, name: user.name });
   }
 
+  async deleteAccount(userId: string) {
+    await this.prisma.user.delete({ where: { id: userId } });
+    return { success: true };
+  }
+
   private async createSession(user: { id: string; email: string; name: string | null }) {
     const accessToken = await this.jwt.signAsync({ sub: user.id, email: user.email });
     return { accessToken, user };

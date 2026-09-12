@@ -15,13 +15,13 @@ export default function WorkDetailPage() {
     queryFn: () => apiFetch<{ work: Work; related: Work[] }>(`/works/${encodeURIComponent(params.id)}`),
   });
 
-  if (result.isLoading) return <main className="mx-auto max-w-5xl px-4 py-10"><div className="panel">Loading publication…</div></main>;
-  if (result.error || !result.data) return <main className="mx-auto max-w-5xl px-4 py-10"><div className="panel border-red-200 bg-red-50 text-red-700">{result.error?.message || 'Publication not found.'}</div></main>;
+  if (result.isLoading) return <main id="main-content" className="mx-auto w-full max-w-5xl px-4 py-10"><div className="panel" role="status">Loading publication…</div></main>;
+  if (result.error || !result.data) return <main id="main-content" className="mx-auto w-full max-w-5xl px-4 py-10"><div className="panel border-red-200 bg-red-50 text-red-800" role="alert">{result.error?.message || 'Publication not found.'}</div></main>;
 
   const { work, related } = result.data;
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+    <main id="main-content" className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6">
       <Link href="/" className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-indigo-700"><ArrowLeft size={16} /> Back to discovery</Link>
       <article className="panel p-6 sm:p-8">
         <div className="flex flex-wrap gap-2 text-sm text-slate-500"><span>{work.publicationYear ?? 'Year unknown'}</span><span>•</span><span>{work.publicationType}</span><span>•</span><span>{work.citedByCount.toLocaleString()} citations</span>{work.isOpenAccess && <span className="badge badge-green text-xs">Open access</span>}{work.isRetracted && <span className="badge badge-red text-xs">Retracted</span>}</div>

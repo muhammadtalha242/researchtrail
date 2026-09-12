@@ -43,17 +43,21 @@ export default function GraphPage() {
   const selected = graph.data?.nodes.find((node) => node.id === selectedId);
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <main id="main-content" className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
       <Link href={`/works/${params.id}`} className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-indigo-700"><ArrowLeft size={16} /> Back to publication</Link>
       <div className="mb-5"><h1 className="text-3xl font-bold">Citation explorer</h1><p className="mt-2 text-slate-600">Grey arrows are references from the centre paper. Green arrows are papers that cite it.</p></div>
 
-      {graph.isLoading && <div className="panel">Loading citation graph…</div>}
-      {graph.error && <div className="panel border-red-200 bg-red-50 text-red-700">{graph.error.message}</div>}
+      {graph.isLoading && <div className="panel" role="status">Loading citation graph…</div>}
+      {graph.error && <div className="panel border-red-200 bg-red-50 text-red-800" role="alert">{graph.error.message}</div>}
       {graph.data && <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="panel p-0 overflow-hidden"><div ref={container} className="h-[680px] w-full bg-slate-50" /></div>
+        <div className="panel overflow-hidden p-0"><div ref={container} role="img" aria-label="Interactive citation network. A keyboard-accessible publication list follows beside the graph." className="h-[680px] w-full bg-slate-50" /></div>
         <aside className="panel h-fit lg:sticky lg:top-24">
           <h2 className="flex items-center gap-2 font-semibold"><Info size={18} /> Selected publication</h2>
-          {selected ? <div className="mt-4"><p className="font-semibold leading-6">{selected.label}</p><p className="mt-2 text-sm text-slate-600">{selected.authors.join(', ') || 'Authors unavailable'}</p><dl className="mt-5 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-500">Year</dt><dd className="font-medium">{selected.year ?? '—'}</dd></div><div><dt className="text-slate-500">Citations</dt><dd className="font-medium">{selected.citedByCount.toLocaleString()}</dd></div></dl><Link href={`/works/${selected.id}`} className="btn-primary mt-6 w-full"><BookOpen size={16} /> Open publication</Link></div> : <p className="mt-4 text-sm text-slate-500">Select a node in the graph.</p>}
+          {selected ? <div className="mt-4"><p className="font-semibold leading-6">{selected.label}</p><p className="mt-2 text-sm text-slate-600">{selected.authors.join(', ') || 'Authors unavailable'}</p><dl className="mt-5 grid grid-cols-2 gap-3 text-sm"><div><dt className="text-slate-600">Year</dt><dd className="font-medium">{selected.year ?? '—'}</dd></div><div><dt className="text-slate-600">Citations</dt><dd className="font-medium">{selected.citedByCount.toLocaleString()}</dd></div></dl><Link href={`/works/${selected.id}`} className="btn-primary mt-6 w-full"><BookOpen aria-hidden="true" size={16} /> Open publication</Link></div> : <p className="mt-4 text-sm text-slate-600">Select a node in the graph.</p>}
+          <h3 className="mt-7 border-t border-slate-200 pt-5 text-sm font-semibold">All publications in this graph</h3>
+          <ul className="mt-2 max-h-64 space-y-2 overflow-y-auto text-sm">
+            {graph.data.nodes.map((node) => <li key={node.id}><Link className="block rounded-md px-2 py-1 text-indigo-800 underline-offset-2 hover:underline" href={`/works/${node.id}`}>{node.label}</Link></li>)}
+          </ul>
         </aside>
       </div>}
     </main>

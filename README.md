@@ -9,6 +9,8 @@ ResearchTrail is a compact full-stack academic discovery application built aroun
 
 The implementation deliberately excludes recommendations, PDF analysis, collaboration, Redis and background jobs to keep the semester-project scope manageable.
 
+The detailed course submission and criterion-by-criterion audit are in [EXAM_REPORT.md](./EXAM_REPORT.md).
+
 ## Stack
 
 - **Frontend:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, TanStack Query, Cytoscape.js
@@ -18,9 +20,18 @@ The implementation deliberately excludes recommendations, PDF analysis, collabor
 
 ## Prerequisites
 
-- Node.js 22+
-- Docker Desktop or a local PostgreSQL instance
+- Node.js 22+ and npm 10+ ([download Node.js](https://nodejs.org/))
+- Docker Desktop with Docker Compose ([installation instructions](https://docs.docker.com/get-docker/)), or a local PostgreSQL 16 instance
 - A free OpenAlex API key (create one in your OpenAlex account settings)
+
+Verify the system dependencies:
+
+```bash
+node --version
+npm --version
+docker --version
+docker compose version
+```
 
 ## Local setup
 
@@ -66,6 +77,29 @@ Open:
 - Web: http://localhost:3000
 - API: http://localhost:4000/api
 
+`npm run dev` starts both workspaces with watch mode. To run them separately, use:
+
+```bash
+npm run dev --workspace @research-trail/api
+npm run dev --workspace @research-trail/web
+```
+
+## Quality checks and production build
+
+```bash
+npm run lint
+npm run build
+```
+
+Run the production builds after a successful build:
+
+```bash
+npm run start --workspace @research-trail/api
+npm run start --workspace @research-trail/web
+```
+
+The API requires `DATABASE_URL`, `JWT_SECRET` and (for normal OpenAlex quota) `OPENALEX_API_KEY` at runtime. The frontend uses `NEXT_PUBLIC_API_URL` to locate the API. Deploy both services behind HTTPS and configure `FRONTEND_URL` to the exact public frontend origin.
+
 ## API routes
 
 ### Public
@@ -76,6 +110,9 @@ POST /api/auth/login
 GET  /api/search?q=...
 GET  /api/works/:id
 GET  /api/works/:id/graph
+GET  /api/trends?q=...
+GET  /api/trends/topics?q=...
+GET  /api/trends/topic/:id
 ```
 
 ### Authenticated
@@ -91,6 +128,7 @@ POST   /api/collections
 DELETE /api/collections/:id
 POST   /api/collections/:id/works
 DELETE /api/collections/:id/works/:savedWorkId
+DELETE /api/auth/account
 ```
 
 ## Project structure
@@ -105,6 +143,8 @@ research-trail/
 └── README.md
 ```
 
+Frontend styles are deliberately separated into `apps/web/styles/base.css` (document defaults, focus and motion preferences) and `apps/web/styles/components.css` (reusable UI and legal-content classes). Page-specific layout remains close to each React view through Tailwind utility classes.
+
 ## Prisma generation
 
 The generated Prisma Client is intentionally not committed. Run `npm run db:generate` after installing dependencies and whenever the Prisma schema changes.
@@ -115,3 +155,5 @@ The generated Prisma Client is intentionally not committed. Run `npm run db:gene
 - The graph is intentionally limited to eight references and eight citing works.
 - Citation counts are shown as metadata, not as a scientific-quality score.
 - The frontend never calls OpenAlex directly. All access goes through the backend.
+- Search queries are proxied but not intentionally stored in PostgreSQL.
+- Privacy, accessibility and the University of Göttingen legal notice are linked from every page footer.

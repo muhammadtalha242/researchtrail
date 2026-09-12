@@ -1,0 +1,84 @@
+.skip-link {
+  @apply fixed left-4 top-4 z-[100] -translate-y-24 rounded-lg bg-slate-950 px-4 py-3 font-semibold text-white shadow-lg transition-transform focus:translate-y-0;
+}
+
+.nav-link {
+  @apply inline-flex items-center gap-2 rounded-lg px-3 py-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-950;
+}
+
+.nav-link[aria-current="page"] {
+  @apply bg-indigo-100 font-semibold text-indigo-950;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-700 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-indigo-800 disabled:hover:bg-indigo-700;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-800 transition hover:border-slate-400 hover:bg-slate-50;
+}
+
+.input {
+  @apply w-full rounded-xl border border-slate-400 bg-white px-3.5 py-2.5 text-sm transition focus:border-indigo-700 focus:ring-4 focus:ring-indigo-100;
+}
+
+.label {
+  @apply mb-1.5 block text-sm font-medium text-slate-800;
+}
+
+.paper-card {
+  @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md;
+}
+
+.badge {
+  @apply rounded-full px-2.5 py-1 font-medium;
+}
+
+.badge-green {
+  @apply bg-emerald-100 text-emerald-900;
+}
+
+.badge-red {
+  @apply bg-red-100 text-red-900;
+}
+
+.topic-chip {
+  @apply rounded-full bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-900;
+}
+
+.panel {
+  @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm;
+}
+
+.legal-content {
+  @apply mx-auto max-w-4xl px-4 py-10 sm:px-6;
+}
+
+.legal-content section {
+  @apply mt-8;
+}
+
+.legal-content h1 {
+  @apply text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl;
+}
+
+.legal-content h2 {
+  @apply text-xl font-semibold text-slate-950;
+}
+
+.legal-content h3 {
+  @apply mt-5 font-semibold text-slate-900;
+}
+
+.legal-content p,
+.legal-content li {
+  @apply mt-2 leading-7 text-slate-700;
+}
+
+.legal-content ul {
+  @apply ml-6 list-disc;
+}
+
+.legal-content a {
+  @apply font-medium text-indigo-800 underline decoration-2 underline-offset-2 hover:text-indigo-950;
+}

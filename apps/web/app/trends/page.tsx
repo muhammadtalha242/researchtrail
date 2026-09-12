@@ -8,11 +8,7 @@ import {
   Award,
   BarChart3,
   BookOpen,
-  CalendarDays,
-  Compass,
-  Download,
   ExternalLink,
-  Filter,
   Layers,
   RefreshCw,
   Search,
@@ -140,37 +136,6 @@ export default function TrendsPage() {
     setFromYear(currentYear - years + 1);
   };
 
-  // Export report handler
-  const handleExportData = () => {
-    if (!trends) return;
-    const exportPayload = {
-      exportedAt: new Date().toISOString(),
-      topic: trends.topic.name,
-      domain: trends.topic.domain?.name,
-      field: trends.topic.field?.name,
-      subfield: trends.topic.subfield?.name,
-      metrics: trends.metrics,
-      publicationGrowth: trends.publicationGrowth,
-      citationActivity: trends.citationActivity,
-      topAuthors: trends.topAuthors,
-      landmarkPublications: trends.highlyCitedWorks.map((w) => ({
-        title: w.title,
-        year: w.publicationYear,
-        citations: w.citedByCount,
-        doi: w.doi,
-      })),
-      relatedTopics: trends.relatedTopics,
-    };
-
-    const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${trends.topic.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-trends.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
   // SVG Chart Computations for Publication Growth
   const pubChartData = useMemo(() => {
     if (!trends?.publicationGrowth?.length) return null;
@@ -201,7 +166,7 @@ export default function TrendsPage() {
   }, [trends]);
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main id="main-content" className="min-h-screen bg-slate-50">
       {/* Top Hero & Control Section */}
       <section className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -225,13 +190,6 @@ export default function TrendsPage() {
               >
                 <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} /> Refresh
               </button>
-              <button
-                onClick={handleExportData}
-                disabled={!trends}
-                className="btn-secondary h-10 px-3.5"
-              >
-                <Download size={15} /> Export JSON
-              </button>
             </div>
           </div>
 
@@ -239,16 +197,22 @@ export default function TrendsPage() {
           <div className="mt-7 grid gap-3 lg:grid-cols-[minmax(300px,1fr)_auto_auto]">
             {/* Topic Search Box & Suggestions Dropdown */}
             <div ref={dropdownRef} className="relative">
-              <form onSubmit={handleSearchSubmit} className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <form onSubmit={handleSearchSubmit} role="search" className="relative">
+                <Search aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                <label className="sr-only" htmlFor="topic-search">Search an academic topic</label>
                 <input
-                  className="input h-11 pl-11 pr-24"
+                  id="topic-search"
+                  role="combobox"
+                  className="input pl-10! h-11 w-full pr-24"
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setIsDropdownOpen(true);
                   }}
                   onFocus={() => setIsDropdownOpen(true)}
+                  aria-autocomplete="list"
+                  aria-controls="topic-suggestions"
+                  aria-expanded={isDropdownOpen && searchQuery.trim().length >= 2}
                   placeholder="Search any academic topic (e.g. Quantum Computing, Cancer Immunotherapy)..."
                 />
                 <button
@@ -261,7 +225,7 @@ export default function TrendsPage() {
 
               {/* Autocomplete Dropdown */}
               {isDropdownOpen && searchQuery.trim().length >= 2 && (
-                <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                <div id="topic-suggestions" role="listbox" aria-label="Matching OpenAlex topics" className="absolute left-0 right-0 top-full z-30 mt-1 max-h-80 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
                   {isSearchingSuggestions ? (
                     <div className="flex items-center gap-2 p-3 text-sm text-slate-400">
                       <RefreshCw size={14} className="animate-spin" /> Searching OpenAlex topics...
@@ -275,6 +239,8 @@ export default function TrendsPage() {
                         <button
                           key={item.id}
                           type="button"
+                          role="option"
+                          aria-selected={selectedTopicId === item.id}
                           onClick={() => handleSelectTopic(item)}
                           className="flex w-full items-start justify-between rounded-lg p-2.5 text-left transition hover:bg-slate-50"
                         >
@@ -303,8 +269,10 @@ export default function TrendsPage() {
             <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-100/70 p-1">
               {PRESET_RANGES.map((preset) => (
                 <button
+                  type="button"
                   key={preset.label}
                   onClick={() => handlePresetRange(preset.years)}
+                  aria-pressed={!isCustomRange && toYear - fromYear + 1 === preset.years}
                   className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                     !isCustomRange && toYear - fromYear + 1 === preset.years
                       ? 'bg-white text-indigo-600 shadow-sm'
@@ -315,7 +283,9 @@ export default function TrendsPage() {
                 </button>
               ))}
               <button
+                type="button"
                 onClick={() => setIsCustomRange(!isCustomRange)}
+                aria-pressed={isCustomRange}
                 className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                   isCustomRange ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                 }`}
@@ -327,7 +297,9 @@ export default function TrendsPage() {
             {/* Apply / Scope Indicator */}
             {isCustomRange && (
               <div className="flex items-center gap-2">
+                <label className="sr-only" htmlFor="from-year">From year</label>
                 <input
+                  id="from-year"
                   type="number"
                   min="1990"
                   max={toYear}
@@ -337,7 +309,9 @@ export default function TrendsPage() {
                   placeholder="From"
                 />
                 <span className="text-slate-400">–</span>
+                <label className="sr-only" htmlFor="to-year">To year</label>
                 <input
+                  id="to-year"
                   type="number"
                   min={fromYear}
                   max={currentYear}
@@ -357,6 +331,7 @@ export default function TrendsPage() {
             </span>
             {POPULAR_TOPICS.map((item) => (
               <button
+                type="button"
                 key={item.name}
                 onClick={() => {
                   setSelectedTopicId(null);
@@ -374,7 +349,7 @@ export default function TrendsPage() {
             ))}
           </div>
 
-          {/* Topic Taxonomy Breadcrumb & Description */}
+          {/* Topic Taxonomy Breadcrumb & Description
           {trends?.topic && (
             <div className="mt-5 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -404,7 +379,7 @@ export default function TrendsPage() {
                 </p>
               )}
             </div>
-          )}
+          )} */}
         </div>
       </section>
 
@@ -412,7 +387,7 @@ export default function TrendsPage() {
       <div className="mx-auto max-w-7xl space-y-7 px-4 py-7 sm:px-6">
         {/* Loading Skeleton */}
         {isLoading && (
-          <div className="space-y-6">
+          <div className="space-y-6" role="status" aria-label="Loading topic trends">
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="panel h-28 animate-pulse bg-slate-200/60" />
@@ -427,7 +402,7 @@ export default function TrendsPage() {
 
         {/* Error Alert */}
         {isError && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center" role="alert">
             <h3 className="text-base font-semibold text-red-900">Failed to load topic trends</h3>
             <p className="mt-1 text-sm text-red-700">
               {error instanceof Error ? error.message : 'Could not retrieve data from OpenAlex. Please try again.'}
@@ -490,9 +465,11 @@ export default function TrendsPage() {
                     {trends.timeRange.fromYear}–{trends.timeRange.toYear}
                   </span>
                 </div>
-                <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 text-xs">
+                <div aria-label="Chart display" className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-1 text-xs">
                   <button
+                    type="button"
                     onClick={() => setActiveChartTab('both')}
+                    aria-pressed={activeChartTab === 'both'}
                     className={`rounded px-2.5 py-1 font-medium transition ${
                       activeChartTab === 'both' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
                     }`}
@@ -500,7 +477,9 @@ export default function TrendsPage() {
                     Side-by-Side
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveChartTab('publications')}
+                    aria-pressed={activeChartTab === 'publications'}
                     className={`rounded px-2.5 py-1 font-medium transition ${
                       activeChartTab === 'publications' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
                     }`}
@@ -508,7 +487,9 @@ export default function TrendsPage() {
                     Publications Only
                   </button>
                   <button
+                    type="button"
                     onClick={() => setActiveChartTab('citations')}
+                    aria-pressed={activeChartTab === 'citations'}
                     className={`rounded px-2.5 py-1 font-medium transition ${
                       activeChartTab === 'citations' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
                     }`}
@@ -539,7 +520,11 @@ export default function TrendsPage() {
                     </div>
 
                     {/* Bar Chart Container */}
-                    <div className="relative mt-8">
+                    <div
+                      className="relative mt-8"
+                      role="img"
+                      aria-label={`Bar chart of publication counts from ${trends.timeRange.fromYear} to ${trends.timeRange.toYear}. A data table follows for screen readers.`}
+                    >
                       {/* Hover Info Banner */}
                       <div className="h-6 text-xs text-slate-600">
                         {hoveredBarIndex !== null && pubChartData.list[hoveredBarIndex] ? (
@@ -609,6 +594,11 @@ export default function TrendsPage() {
                         })}
                       </div>
                     </div>
+                    <table className="sr-only">
+                      <caption>Publication growth by year</caption>
+                      <thead><tr><th scope="col">Year</th><th scope="col">Publications</th><th scope="col">Growth rate</th></tr></thead>
+                      <tbody>{pubChartData.list.map((item) => <tr key={item.year}><th scope="row">{item.year}</th><td>{item.count}</td><td>{item.growthRate === null ? 'Not available' : `${item.growthRate}%`}</td></tr>)}</tbody>
+                    </table>
                   </div>
                 )}
 
@@ -647,6 +637,8 @@ export default function TrendsPage() {
 
                       <div className="relative mt-2 h-56 border-b border-slate-200">
                         <svg
+                          role="img"
+                          aria-label={`Line chart of annual citations from ${trends.timeRange.fromYear} to ${trends.timeRange.toYear}. A data table follows for screen readers.`}
                           viewBox={`0 0 ${citationChartData.width} ${citationChartData.height}`}
                           preserveAspectRatio="none"
                           className="h-full w-full overflow-visible"
@@ -718,6 +710,11 @@ export default function TrendsPage() {
                         })}
                       </div>
                     </div>
+                    <table className="sr-only">
+                      <caption>Citation activity by year</caption>
+                      <thead><tr><th scope="col">Year</th><th scope="col">Citations</th></tr></thead>
+                      <tbody>{citationChartData.list.map((item) => <tr key={item.year}><th scope="row">{item.year}</th><td>{item.citations}</td></tr>)}</tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -834,6 +831,7 @@ export default function TrendsPage() {
                         >
                           <div className="min-w-0 pr-3">
                             <button
+                              type="button"
                               onClick={() => handleSelectTopic(rel)}
                               className="text-left text-sm font-semibold text-slate-900 transition hover:text-indigo-600"
                             >
@@ -852,9 +850,10 @@ export default function TrendsPage() {
                           </div>
 
                           <button
+                            type="button"
                             onClick={() => handleSelectTopic(rel)}
                             className="shrink-0 rounded-lg bg-indigo-50 p-2 text-indigo-600 transition hover:bg-indigo-100"
-                            title={`Explore ${rel.name} trends`}
+                            aria-label={`Explore ${rel.name} trends`}
                           >
                             <ArrowRight size={15} />
                           </button>
