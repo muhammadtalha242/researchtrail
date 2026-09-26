@@ -3,6 +3,7 @@ import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinL
 
 export class SearchWorksDto {
   @IsString()
+  @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @MinLength(2)
   @MaxLength(300)
   q: string;

@@ -3,14 +3,14 @@
 ## Submission metadata
 
 - **Title:** ResearchTrail — Academic Discovery and Trend Exploration
-- **Student ID number:** TODO — student must complete
-- **Deployment URL:** TODO — student must complete after deployment
-- **Estimated total development time:** TODO — student must complete
-- **GitLab repository URL (optional):** TODO — student must complete if submitted by repository
+- **Student ID number:** 24131621
+- **Deployment URL:** ******
+- **Estimated total development time:** 160-180 hours
+- **GitLab repository URL (optional):** git@gitlab.gwdg.de:m.abbas/researchtrail.git
 
 ## Submission checklist
 
-- [ ] Metadata above completed by the student.
+- [x] Metadata above completed by the student.
 - [x] Privacy information integrated at `/privacy` and linked globally.
 - [x] Accessibility statement integrated at `/accessibility` and linked globally.
 - [x] [University of Göttingen legal notice](https://www.uni-goettingen.de/de/439238.html) linked globally and from both statements.
@@ -41,7 +41,7 @@ ResearchTrail is a full-stack web application for students, researchers and othe
 | Browser UI | Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4 | Views, navigation, forms, visualisation and server-state rendering |
 | Client data | TanStack Query | Loading/error state, request caching and refetch control |
 | Graph | Cytoscape.js | Interactive citation graph rendering |
-| HTTP API | NestJS 11, TypeScript, class-validator, NestJS Throttler | Routes, validation, rate limiting and orchestration |
+| HTTP API | NestJS 12, TypeScript, class-validator, Helmet, express-rate-limit | Routes, validation, security headers, rate limiting and orchestration |
 | External data | OpenAlex REST API | Scholarly works, topics, authors, citations and references |
 
 ### System structure
@@ -106,7 +106,7 @@ Next.js generates HTML through React Server and Client Components. Interactive, 
 - `TrendsModule`: topic lookup and trend analytics endpoints.
 - `OpenAlexModule`: external HTTP adapter, normalisation, timeout handling and error translation.
 
-Global request validation rejects unexpected fields and converts supported query primitives. Global throttling limits a client to 60 requests per minute. CORS is restricted to the configured/local frontend origins. Every route is read-only from the application’s perspective.
+Global request validation rejects unexpected fields and converts supported query primitives. Per-client throttling enforces a 10-request/second burst limit and a 60-request/minute sustained limit; graph and full trend analysis are additionally capped at 10 requests/minute. CORS is restricted to the configured frontend origin in production. Helmet, no-store caching and a simple query parser reduce the HTTP attack surface. Every route is read-only from the application’s perspective.
 
 ### Communication interfaces and APIs
 
@@ -133,7 +133,7 @@ ResearchTrail has no application database and does not persist queries or OpenAl
 
 ### Backend technical implementation and challenges
 
-NestJS was selected for explicit modules, dependency injection, DTO validation and consistent HTTP error handling. `class-validator` checks query parameters and NestJS Throttler limits abusive request rates. Native server-side `fetch` avoids another HTTP-client dependency.
+NestJS was selected for explicit modules, dependency injection, DTO validation and consistent HTTP error handling. `class-validator` checks and trims query parameters; express-rate-limit provides standard rate-limit headers and separate protection for expensive fan-out routes. Helmet supplies API security headers. Native server-side `fetch` avoids another HTTP-client dependency.
 
 OpenAlex IDs arrive as URLs or short identifiers and must be normalised consistently. Abstract inverted indexes must be rebuilt in word-position order. Citation graph responses combine centre, reference and citing-work requests while deduplicating nodes. Trend responses combine grouped counts, top works, author statistics and related topics; optional datasets degrade to empty sections while primary lookup failures remain visible.
 
@@ -145,7 +145,7 @@ Verification combines ESLint/build checks, keyboard-only navigation, responsive 
 
 ## Data protection
 
-Privacy by design is primarily implemented through data minimisation. The application has no profiles, personal records, write endpoints, application database, advertising, analytics or intentional search-history storage. The OpenAlex key remains server-side, DTO validation rejects unexpected input, requests are rate-limited and HTTPS is required in production.
+Privacy by design is primarily implemented through data minimisation. The application has no profiles, personal records, write endpoints, application database, advertising, analytics or intentional search-history storage. The OpenAlex key remains server-side, DTO validation rejects unexpected input, API responses are marked `no-store`, requests are rate-limited and HTTPS is required in production.
 
 Web and API infrastructure necessarily processes IP addresses, timestamps, requested resources, status codes and user-agent data and may log them. Search terms, filters and OpenAlex identifiers are proxied to OpenAlex. Source/PDF providers receive connection data only when a user follows a link. The application does not request special-category data, but a user could enter personal or sensitive information in a search query and is advised not to do so.
 

@@ -19,8 +19,8 @@ export default function PrivacyPage() {
 
       <section>
         <h2>1. Controller and contact</h2>
-        <p><strong>Responsible project operator:</strong> [complete before public deployment]</p>
-        <p><strong>Contact:</strong> [complete before public deployment]</p>
+        <p><strong>Responsible project operator:</strong> Talha </p>
+        <p><strong>Contact:</strong> talha@example.com </p>
         <p>
           The University of Göttingen&apos;s official legal information is available in its{' '}
           <a href="https://www.uni-goettingen.de/de/439238.html" target="_blank" rel="noreferrer">

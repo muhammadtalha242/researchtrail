@@ -1,5 +1,4 @@
-import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { BadGatewayException, BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import {
   OpenAlexWork,
   NormalizedWork,
@@ -9,16 +8,13 @@ import {
   NormalizedAuthor,
   TopicTrendsResponse,
 } from './openalex.types';
+import { normalizeOpenAlexId, parseOpenAlexId, safeExternalUrl } from './openalex-security';
 
 @Injectable()
 export class OpenAlexService {
-  private readonly baseUrl: string;
-  private readonly apiKey?: string;
-
-  constructor(config: ConfigService) {
-    this.baseUrl = config.get<string>('OPENALEX_BASE_URL', 'https://api.openalex.org');
-    this.apiKey = config.get<string>('OPENALEX_API_KEY') || undefined;
-  }
+  private static readonly BASE_URL = 'https://api.openalex.org';
+  private static readonly MAX_RESPONSE_BYTES = 15 * 1024 * 1024;
+  private readonly apiKey = process.env.OPENALEX_API_KEY?.trim() || undefined;
 
   async searchWorks(input: {
     query: string;
@@ -28,6 +24,7 @@ export class OpenAlexService {
     sort?: 'relevance' | 'newest' | 'cited';
     page?: number;
   }) {
+    this.validateYearRange(input.fromYear, input.toYear);
     const filters: string[] = [];
     if (input.fromYear && input.toYear) filters.push(`publication_year:${input.fromYear}-${input.toYear}`);
     else if (input.fromYear) filters.push(`publication_year:>${input.fromYear - 1}`);
@@ -58,14 +55,9 @@ export class OpenAlexService {
   }
 
   async getWork(id: string): Promise<NormalizedWork> {
-    const workId = this.normalizeId(id);
-    try {
-      const work = await this.request<OpenAlexWork>(`/works/${encodeURIComponent(workId)}`);
-      return this.normalizeWork(work);
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw error;
-    }
+    const workId = parseOpenAlexId(id, 'work');
+    const work = await this.request<OpenAlexWork>(`/works/${workId}`);
+    return this.normalizeWork(work);
   }
 
   async getWorkWithRelated(id: string) {
@@ -105,7 +97,7 @@ export class OpenAlexService {
   }
 
   async getWorksByIds(ids: string[]) {
-    const normalizedIds = [...new Set(ids.map((id) => this.normalizeId(id)).filter(Boolean))].slice(0, 100);
+    const normalizedIds = [...new Set(ids.map(normalizeOpenAlexId).filter((id) => /^W\d{1,20}$/.test(id)))].slice(0, 100);
     if (!normalizedIds.length) return [];
     const response = await this.request<{ results: OpenAlexWork[] }>('/works', {
       filter: `openalex:${normalizedIds.join('|')}`,
@@ -115,7 +107,7 @@ export class OpenAlexService {
   }
 
   private async request<T>(path: string, params: Record<string, string | undefined> = {}): Promise<T> {
-    const url = new URL(path, this.baseUrl);
+    const url = new URL(path, OpenAlexService.BASE_URL);
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== '') url.searchParams.set(key, value);
     }
@@ -131,17 +123,23 @@ export class OpenAlexService {
       throw new BadGatewayException('OpenAlex could not be reached. Please try again.');
     }
 
-    if (response.status === 404) throw new NotFoundException('Publication not found.');
+    if (response.status === 404) throw new NotFoundException('OpenAlex resource not found.');
     if (!response.ok) {
-      const body = await response.text();
-      throw new BadGatewayException(`OpenAlex request failed (${response.status}): ${body.slice(0, 180)}`);
+      await response.body?.cancel();
+      throw new BadGatewayException('OpenAlex returned an error. Please try again.');
     }
 
-    return (await response.json()) as T;
-  }
+    const contentLength = Number(response.headers.get('content-length'));
+    if (Number.isFinite(contentLength) && contentLength > OpenAlexService.MAX_RESPONSE_BYTES) {
+      await response.body?.cancel();
+      throw new BadGatewayException('OpenAlex returned an unexpectedly large response.');
+    }
 
-  private normalizeId(id: string) {
-    return decodeURIComponent(id).replace(/^https?:\/\/(api\.)?openalex\.org\//, '').trim();
+    try {
+      return (await response.json()) as T;
+    } catch {
+      throw new BadGatewayException('OpenAlex returned an invalid response.');
+    }
   }
 
   async searchTopics(query: string, limit = 10): Promise<NormalizedTopic[]> {
@@ -154,8 +152,8 @@ export class OpenAlexService {
   }
 
   async getTopic(id: string): Promise<NormalizedTopic> {
-    const topicId = this.normalizeId(id);
-    const response = await this.request<OpenAlexTopic>(`/topics/${encodeURIComponent(topicId)}`);
+    const topicId = parseOpenAlexId(id, 'topic');
+    const response = await this.request<OpenAlexTopic>(`/topics/${topicId}`);
     return this.normalizeTopic(response);
   }
 
@@ -165,6 +163,7 @@ export class OpenAlexService {
     fromYear?: number;
     toYear?: number;
   }): Promise<TopicTrendsResponse> {
+    this.validateYearRange(input.fromYear, input.toYear);
     let topic: NormalizedTopic | null = null;
     if (input.topicId) {
       try {
@@ -196,6 +195,9 @@ export class OpenAlexService {
     const currentYear = new Date().getFullYear();
     const toYear = input.toYear ? Math.min(input.toYear, currentYear) : currentYear;
     const fromYear = input.fromYear ? Math.max(1990, input.fromYear) : toYear - 9;
+    if (fromYear > toYear) {
+      throw new BadRequestException('The selected trend range does not include a completed year.');
+    }
 
     const [groupByResponse, topWorksResponse, authorsResponse, siblingTopicsResponse] = await Promise.all([
       this.request<{ group_by: Array<{ key: string; count: number }> }>('/works', {
@@ -218,8 +220,8 @@ export class OpenAlexService {
       (async () => {
         const siblingIds = (topic.siblings ?? [])
           .slice(0, 8)
-          .map((s) => this.normalizeId(s.id))
-          .filter(Boolean);
+          .map((s) => normalizeOpenAlexId(s.id))
+          .filter((id) => /^T\d{1,20}$/.test(id));
         if (!siblingIds.length) return [];
         try {
           const res = await this.request<{ results: OpenAlexTopic[] }>('/topics', {
@@ -288,7 +290,7 @@ export class OpenAlexService {
       .sort((a, b) => a.year - b.year);
 
     const topAuthors: NormalizedAuthor[] = (authorsResponse.results || []).map((author) => ({
-      id: this.normalizeId(author.id),
+      id: normalizeOpenAlexId(author.id),
       name: author.display_name,
       institution: author.last_known_institutions?.[0]?.display_name ?? null,
       worksCount: author.works_count ?? 0,
@@ -326,39 +328,39 @@ export class OpenAlexService {
   }
 
   private normalizeTopic(topic: OpenAlexTopic): NormalizedTopic {
-    const openAlexId = this.normalizeId(topic.id);
+    const openAlexId = normalizeOpenAlexId(topic.id);
     return {
       id: openAlexId,
       openAlexId,
       name: topic.display_name,
       description: topic.description || '',
       keywords: topic.keywords ?? [],
-      subfield: topic.subfield ? { id: this.normalizeId(topic.subfield.id), name: topic.subfield.display_name } : null,
-      field: topic.field ? { id: this.normalizeId(topic.field.id), name: topic.field.display_name } : null,
-      domain: topic.domain ? { id: this.normalizeId(topic.domain.id), name: topic.domain.display_name } : null,
+      subfield: topic.subfield ? { id: normalizeOpenAlexId(topic.subfield.id), name: topic.subfield.display_name } : null,
+      field: topic.field ? { id: normalizeOpenAlexId(topic.field.id), name: topic.field.display_name } : null,
+      domain: topic.domain ? { id: normalizeOpenAlexId(topic.domain.id), name: topic.domain.display_name } : null,
       worksCount: topic.works_count ?? 0,
       citedByCount: topic.cited_by_count ?? 0,
       siblings: (topic.siblings ?? []).map((sibling) => ({
-        id: this.normalizeId(sibling.id),
+        id: normalizeOpenAlexId(sibling.id),
         name: sibling.display_name,
       })),
     };
   }
 
   private normalizeWork(work: OpenAlexWork): NormalizedWork {
-    const openAlexId = this.normalizeId(work.id);
+    const openAlexId = normalizeOpenAlexId(work.id);
     return {
       id: openAlexId,
       openAlexId,
       title: work.display_name || 'Untitled publication',
       abstract: this.rebuildAbstract(work.abstract_inverted_index),
       authors: (work.authorships ?? []).slice(0, 20).map((authorship) => ({
-        id: this.normalizeId(authorship.author.id),
+        id: normalizeOpenAlexId(authorship.author.id),
         name: authorship.author.display_name,
         institutions: (authorship.institutions ?? []).map((institution) => institution.display_name),
       })),
       topics: (work.topics ?? []).map((topic) => ({
-        id: this.normalizeId(topic.id),
+        id: normalizeOpenAlexId(topic.id),
         name: topic.display_name,
         score: topic.score,
       })),
@@ -371,14 +373,14 @@ export class OpenAlexService {
       openAccessStatus: work.open_access?.oa_status ?? null,
       doi: work.doi,
       sourceUrl:
-        work.best_oa_location?.landing_page_url ??
-        work.primary_location?.landing_page_url ??
-        work.doi ??
+        safeExternalUrl(work.best_oa_location?.landing_page_url) ??
+        safeExternalUrl(work.primary_location?.landing_page_url) ??
+        safeExternalUrl(work.doi) ??
         `https://openalex.org/${openAlexId}`,
-      pdfUrl: work.best_oa_location?.pdf_url ?? work.primary_location?.pdf_url ?? null,
+      pdfUrl: safeExternalUrl(work.best_oa_location?.pdf_url ?? work.primary_location?.pdf_url),
       isRetracted: Boolean(work.is_retracted),
-      referencedWorkIds: (work.referenced_works ?? []).map((reference) => this.normalizeId(reference)),
-      relatedWorkIds: (work.related_works ?? []).map((related) => this.normalizeId(related)),
+      referencedWorkIds: (work.referenced_works ?? []).map(normalizeOpenAlexId).filter((id) => /^W\d{1,20}$/.test(id)),
+      relatedWorkIds: (work.related_works ?? []).map(normalizeOpenAlexId).filter((id) => /^W\d{1,20}$/.test(id)),
       countsByYear: (work.counts_by_year ?? []).map((entry) => ({
         year: entry.year,
         citedByCount: entry.cited_by_count,
@@ -394,5 +396,11 @@ export class OpenAlexService {
     }
     positions.sort((a, b) => a[0] - b[0]);
     return positions.map(([, word]) => word).join(' ');
+  }
+
+  private validateYearRange(fromYear?: number, toYear?: number) {
+    if (fromYear !== undefined && toYear !== undefined && fromYear > toYear) {
+      throw new BadRequestException('fromYear must not be later than toYear.');
+    }
   }
 }

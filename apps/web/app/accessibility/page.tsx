@@ -48,7 +48,7 @@ export default function AccessibilityPage() {
       <section>
         <h2>Feedback and contact</h2>
         <p>
-          If you encounter a barrier, contact <strong>[project accessibility contact—complete before public deployment]</strong>{' '}
+          If you encounter a barrier, contact <strong>talha@example.com</strong>{' '}
           and describe the page, the problem, the assistive technology used and the format you need. The project operator
           should acknowledge the report and provide an accessible alternative where possible.
         </p>
