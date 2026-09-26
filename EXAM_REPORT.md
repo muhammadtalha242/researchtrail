@@ -15,7 +15,7 @@
 - [x] Accessibility statement integrated at `/accessibility` and linked globally.
 - [x] [University of Göttingen legal notice](https://www.uni-goettingen.de/de/439238.html) linked globally and from both statements.
 - [x] `README.md` documents system dependencies, dependency installation, configuration, development, build and production-run instructions.
-- [ ] Source submission completed: grant `lorenz.glissmann@uni-goettingen.de` access to the repository stated above, or attach a `.zip` file.
+- [x] Source submission completed: grant `lorenz.glissmann@uni-goettingen.de` access to the repository stated above, or attach a `.zip` file.
 - [ ] Operator, contact, hosting and retention placeholders completed before public deployment.
 
 ## Abstract
@@ -150,18 +150,3 @@ Privacy by design is primarily implemented through data minimisation. The applic
 Web and API infrastructure necessarily processes IP addresses, timestamps, requested resources, status codes and user-agent data and may log them. Search terms, filters and OpenAlex identifiers are proxied to OpenAlex. Source/PDF providers receive connection data only when a user follows a link. The application does not request special-category data, but a user could enter personal or sensitive information in a search query and is advised not to do so.
 
 There are no application-held user records for automatic access, rectification, portability or erasure. Rights relating to hosting logs or other operator-held data require manual contact with the controller. Before deployment, the operator must complete the controller/contact, host, processing-location, processor, legal-basis, log-retention and supervisory-authority details in the privacy information.
-
-## Evaluation audit
-
-| Criterion | Status | Evidence / remaining work |
-| --- | --- | --- |
-| Functional completeness | **Met for declared scope** | Discovery, trends, publication detail and graph routes are implemented; excluded features are stated. Live-API end-to-end tests remain desirable. |
-| Correctness | **Mostly met** | DTO validation, identifier normalisation and explicit error states exist. Automated unit/integration coverage is the largest engineering gap. |
-| Appropriateness | **Met** | The stack and bounded, stateless scope fit a data-driven academic discovery application. |
-| Code quality | **Mostly met** | Strict TypeScript, focused modules, reusable components/services, separated style layers and lint/build scripts. The large trends view is still a refactoring candidate. |
-| Architecture | **Met** | Trust boundaries, modules, external adapter, stateless data flow and trade-offs are documented above. |
-| Strategic decisions | **Met** | Six cross-project decisions and their rationale are recorded above. |
-| Usability | **Mostly met** | Responsive navigation and explicit loading, failure and empty states support focused workflows. Formal task-based usability testing remains outstanding. |
-| Accessibility | **Mostly met** | Integrated statement and WCAG-oriented implementation exist. Screen-reader/user testing and richer graph equivalence remain outstanding. |
-| Data protection | **Partially met pending deployment details** | Strong data minimisation and an integrated notice exist; controller, host, legal-basis and log-retention details must be completed before production. |
-| Legal submission items | **Partially met** | All required legal links/pages are integrated; student metadata, contact placeholders and repository access remain manual checklist items. |
