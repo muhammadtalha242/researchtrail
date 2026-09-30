@@ -4,7 +4,8 @@
 
 - **Title:** ResearchTrail — Academic Discovery and Trend Exploration
 - **Student ID number:** 24131621
-- **Deployment URL:** ******
+- **Frontend deployment URL:** https://researchtrail.vercel.app
+- **Backend API URL:** https://researchtrail-api.onrender.com/api
 - **Estimated total development time:** 160-180 hours
 - **GitLab repository URL (optional):** git@gitlab.gwdg.de:m.abbas/researchtrail.git
 
@@ -55,6 +56,8 @@ flowchart LR
 ```
 
 The application is a stateless client–server system. Next.js owns presentation and browser interaction. NestJS is the controlled boundary for input validation, request limits and external-data access. `OpenAlexService` is an adapter that hides OpenAlex response shapes and gives the rest of the application stable, normalised domain objects. There is no application persistence layer.
+
+The production frontend is deployed on Vercel at `https://researchtrail.vercel.app`, and the production API is deployed on Render at `https://researchtrail-api.onrender.com/api`. The Render free service tier spins down the API after 15 minutes without inbound traffic. Its first request after an idle period can therefore take about one minute. The application should be opened shortly before an evaluation so the API is active when testing begins.
 
 ### Project-wide decisions
 

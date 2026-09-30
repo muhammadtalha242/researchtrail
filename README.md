@@ -11,6 +11,13 @@ The application deliberately has no user-specific or persistent-data features, r
 
 The detailed course submission report and criterion-by-criterion audit are in [EXAM_REPORT.md](./EXAM_REPORT.md).
 
+## Live deployment
+
+- **Web application:** https://researchtrail.vercel.app
+- **API base URL:** https://researchtrail-api.onrender.com/api
+
+The frontend is deployed on Vercel and the API is deployed on Render's free service tier. Render spins down the API after 15 minutes without inbound traffic. The first request after an idle period can therefore take about one minute while the service starts again. Open the application shortly before an evaluation so the API is ready when the evaluator begins testing it.
+
 ## Stack
 
 - **Frontend:** Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, TanStack Query, Cytoscape.js
